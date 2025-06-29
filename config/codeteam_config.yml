@@ -1,0 +1,31 @@
+version: 1.0
+
+# LLM provider configuration, passed to Claude Code SDK
+llm:
+  model: "claude-3-5-sonnet-20240620"
+
+# Agent-specific configurations
+agents:
+  coder:
+    # Token limit for the CODER_LOG.md before the Summarizer is triggered.
+    log_summarize_threshold: 75000
+
+# Definitions for the VERIFYING state
+verification:
+  commands:
+    - name: "Unit Tests"
+      command: "pytest"
+    - name: "Linter"
+      command: "ruff check ."
+    - name: "Formatter Check"
+      command: "ruff format --check ."
+  metrics:
+    max_file_lines: 500
+    max_method_lines: 80
+
+# The number of concurrent verifier agents to run for each category.
+verifier_instances:
+  architecture: 1
+  task_completion: 1
+  security: 0
+  performance: 0
