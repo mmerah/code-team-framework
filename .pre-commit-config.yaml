@@ -1,0 +1,31 @@
+# Pre-commit hooks configuration
+# Install with: pip install pre-commit && pre-commit install
+# Run manually: pre-commit run --all-files
+
+repos:
+  # Ruff - Fast Python linter and formatter
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.11.13
+    hooks:
+      # Run the linter
+      - id: ruff
+        args: [ --fix ]
+      # Run the formatter
+      - id: ruff-format
+
+  # Type checking with mypy
+  - repo: local
+    hooks:
+      - id: mypy-src
+        name: Type check src/ with mypy
+        entry: mypy src --strict
+        language: system
+        pass_filenames: false
+        files: ^src/.*\.py$
+        
+      - id: mypy-main
+        name: Type check main.py with mypy
+        entry: mypy main.py --strict
+        language: system
+        pass_filenames: false
+        files: ^main\.py$
