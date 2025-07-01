@@ -32,4 +32,18 @@ class Committer(Agent):
                     if isinstance(block, TextBlock):
                         commit_message += block.text
 
+        # Clean the message: remove potential code blocks and surrounding text
+        if "```" in commit_message:
+            # Simple extraction if it uses code blocks
+            lines = commit_message.split("\n")
+            core_message_lines = []
+            in_block = False
+            for line in lines:
+                if line.strip().startswith("```"):
+                    in_block = not in_block
+                    continue
+                if in_block:
+                    core_message_lines.append(line)
+            commit_message = "\n".join(core_message_lines)
+
         return commit_message.strip()
