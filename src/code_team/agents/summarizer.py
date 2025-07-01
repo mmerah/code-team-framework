@@ -1,5 +1,3 @@
-from claude_code_sdk import AssistantMessage, TextBlock
-
 from code_team.agents.base import Agent
 
 
@@ -16,15 +14,10 @@ class Summarizer(Agent):
         Returns:
             A condensed version of the log.
         """
-        print("Summarizer: Condensing Coder Log to preserve context...")
         system_prompt = self.templates.render("SUMMARIZER_INSTRUCTIONS.md")
         prompt = f"Please summarize the following log:\n\n{log_content}"
 
-        summary = ""
-        async for message in self.llm.query(prompt=prompt, system_prompt=system_prompt):
-            if isinstance(message, AssistantMessage):
-                for block in message.content:
-                    if isinstance(block, TextBlock):
-                        summary += block.text
+        llm_stream = self.llm.query(prompt=prompt, system_prompt=system_prompt)
+        summary = await self._stream_and_collect_response(llm_stream)
 
         return summary.strip()

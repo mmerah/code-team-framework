@@ -1,4 +1,11 @@
-from claude_code_sdk import AssistantMessage, ResultMessage, TextBlock
+from claude_code_sdk import (
+    AssistantMessage,
+    Message,
+    ResultMessage,
+    TextBlock,
+    ToolUseBlock,
+)
+from rich.console import Console
 
 from code_team.agents.base import Agent
 
@@ -19,10 +26,6 @@ class Coder(Agent):
         Returns:
             True if the process completed, False otherwise.
         """
-        print(
-            "Coder: Starting work on the current task. See .codeteam/logs/CODER_LOG.md for details."
-        )
-
         system_prompt = self.templates.render(
             "CODER_INSTRUCTIONS.md",
             VERIFICATION_FEEDBACK=verification_feedback
@@ -34,21 +37,45 @@ class Coder(Agent):
         )
 
         allowed_tools = ["Read", "Write", "Bash"]
-        final_message = ""
 
         # Using the SDK's query function to run the agentic Coder
-        async for message in self.llm.query(
+        llm_stream = self.llm.query(
             prompt=prompt,
             system_prompt=coder_prompt + "\n\n" + system_prompt,
             allowed_tools=allowed_tools,
-        ):
-            if isinstance(message, AssistantMessage):
-                for block in message.content:
-                    if isinstance(block, TextBlock):
-                        # We can print coder's "thoughts" or actions here if needed
-                        print(f"Coder thought: {block.text[:100]}...")
-            elif isinstance(message, ResultMessage):
-                final_message = message.result or "Completed"
+        )
 
-        print(f"Coder: Task execution finished. Result: {final_message}")
+        # Custom streaming for Coder since it needs to handle ResultMessage differently
+        async for message in llm_stream:
+            # Let the base class handle AssistantMessage and other message types
+            # by manually calling the streaming logic without the "finished" message
+            await self._handle_coder_message(message)
+
         return True
+
+    async def _handle_coder_message(self, message: Message) -> None:
+        """Handle individual messages from the Coder's LLM stream."""
+        console = Console()
+
+        if isinstance(message, AssistantMessage):
+            for block in message.content:
+                if isinstance(block, TextBlock):
+                    if text_content := block.text.strip():
+                        # Use rich's markup escaping for user-generated content
+                        escaped_text = text_content.replace("[", "[[").replace(
+                            "]", "]]"
+                        )
+                        console.print(
+                            f"  [grey50]Coder: {escaped_text[:150]}...[/grey50]"
+                        )
+                elif isinstance(block, ToolUseBlock):
+                    console.print(
+                        f"  [bold yellow]↳ Tool Use:[/bold yellow] [bold magenta]{block.name}[/bold magenta]"
+                    )
+                    for key, value in block.input.items():
+                        escaped_value = str(value).replace("[", "[[").replace("]", "]]")
+                        console.print(
+                            f"    [green]{key}:[/green] {escaped_value[:200]}"
+                        )
+        elif isinstance(message, ResultMessage) and message.is_error:
+            console.print(f"  [bold red]Result: Error ({message.subtype})[/bold red]")

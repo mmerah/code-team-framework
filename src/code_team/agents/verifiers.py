@@ -1,7 +1,5 @@
 from typing import Any
 
-from claude_code_sdk import AssistantMessage, TextBlock
-
 from code_team.agents.base import Agent
 from code_team.models.plan import Task
 
@@ -28,6 +26,11 @@ class CodeVerifier(Agent):
 
         return mapping[verifier_type]
 
+    @property
+    def name(self) -> str:
+        """Returns the verifier's specific name including type."""
+        return f"{self.__class__.__name__} ({self.verifier_type})"
+
     async def run(self, task: Task, diff: str) -> str:  # type: ignore[override]
         """
         Runs the verifier on the provided code changes.
@@ -39,9 +42,6 @@ class CodeVerifier(Agent):
         Returns:
             A formatted PASS/FAIL report.
         """
-        print(
-            f"Verifier ({self.verifier_type}): Analyzing code changes for task '{task.id}'..."
-        )
         system_prompt = self.templates.render(
             self.instruction_file,
             TASK_ID=task.id,
@@ -57,11 +57,7 @@ class CodeVerifier(Agent):
         Please provide your verification report in the specified PASS/FAIL format.
         """
 
-        report = ""
-        async for message in self.llm.query(prompt=prompt, system_prompt=system_prompt):
-            if isinstance(message, AssistantMessage):
-                for block in message.content:
-                    if isinstance(block, TextBlock):
-                        report += block.text
+        llm_stream = self.llm.query(prompt=prompt, system_prompt=system_prompt)
+        report = await self._stream_and_collect_response(llm_stream)
 
         return report.strip()

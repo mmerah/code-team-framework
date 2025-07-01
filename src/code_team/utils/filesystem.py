@@ -22,6 +22,7 @@ def get_repo_map(root: Path, exclude_dirs: list[str] | None = None) -> str:
         exclude_dirs = [
             ".git",
             ".mypy_cache",
+            ".ruff_cache",
             ".venv",
             ".idea",
             "__pycache__",

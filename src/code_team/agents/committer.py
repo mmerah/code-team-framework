@@ -1,5 +1,3 @@
-from claude_code_sdk import AssistantMessage, TextBlock
-
 from code_team.agents.base import Agent
 from code_team.models.plan import Task
 
@@ -17,7 +15,6 @@ class Committer(Agent):
         Returns:
             A formatted commit message string.
         """
-        print(f"Committer: Generating commit message for task '{task.id}'...")
         system_prompt = self.templates.render(
             "COMMIT_INSTRUCTIONS.md",
             TASK_ID=task.id,
@@ -25,12 +22,8 @@ class Committer(Agent):
         )
         prompt = "Generate the commit message."
 
-        commit_message = ""
-        async for message in self.llm.query(prompt=prompt, system_prompt=system_prompt):
-            if isinstance(message, AssistantMessage):
-                for block in message.content:
-                    if isinstance(block, TextBlock):
-                        commit_message += block.text
+        llm_stream = self.llm.query(prompt=prompt, system_prompt=system_prompt)
+        commit_message = await self._stream_and_collect_response(llm_stream)
 
         # Clean the message: remove potential code blocks and surrounding text
         if "```" in commit_message:

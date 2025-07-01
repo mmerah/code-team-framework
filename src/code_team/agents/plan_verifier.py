@@ -1,5 +1,3 @@
-from claude_code_sdk import AssistantMessage, TextBlock
-
 from code_team.agents.base import Agent
 
 
@@ -17,10 +15,6 @@ class PlanVerifier(Agent):
         Returns:
             A string containing the verification feedback.
         """
-        print(
-            "Plan Verifier: Reviewing the generated plan for feasibility and completeness..."
-        )
-
         system_prompt = self.templates.render("PLAN_VERIFIER_INSTRUCTIONS.md")
         prompt = f"""
         Here is the plan to verify:
@@ -38,11 +32,7 @@ class PlanVerifier(Agent):
         Please perform a critical review and provide your feedback in the specified format.
         """
 
-        feedback = ""
-        async for message in self.llm.query(prompt=prompt, system_prompt=system_prompt):
-            if isinstance(message, AssistantMessage):
-                for block in message.content:
-                    if isinstance(block, TextBlock):
-                        feedback += block.text
+        llm_stream = self.llm.query(prompt=prompt, system_prompt=system_prompt)
+        feedback = await self._stream_and_collect_response(llm_stream)
 
         return feedback.strip()
