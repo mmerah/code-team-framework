@@ -67,3 +67,7 @@ venv.bak/
 config/agent_instructions/REPO_MAP.md
 docs/planning/
 *.log
+
+# Formatting
+.repo_formatter.yaml
+repository.md
