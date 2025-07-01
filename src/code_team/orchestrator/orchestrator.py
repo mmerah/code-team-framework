@@ -1,5 +1,6 @@
 import asyncio
 import os
+import subprocess
 from pathlib import Path
 
 import yaml
@@ -137,50 +138,95 @@ class Orchestrator:
                 break
 
     async def _execute_task_cycle(self, plan: Plan, task: Task) -> None:
-        """Handles the full lifecycle for a single task."""
-        # CODING
-        self.state = OrchestratorState.CODING_PROMPTING
-        prompter = Prompter(
-            self.llm_provider, self.template_manager, self.config, self.project_root
-        )
-        coder_prompt = await prompter.run(task)
+        """Handles the full lifecycle for a single task, allowing for retries."""
+        verification_feedback: str | None = None
+        max_retries = 3
+        current_try = 0
 
-        self.state = OrchestratorState.CODING_IN_PROGRESS
-        coder = Coder(
-            self.llm_provider, self.template_manager, self.config, self.project_root
-        )
-        await coder.run(coder_prompt)
+        while current_try < max_retries:
+            current_try += 1
 
-        # VERIFICATION
-        self.state = OrchestratorState.VERIFYING
-        verification_report = await self._run_verification(task)
-
-        self.state = OrchestratorState.AWAITING_VERIFICATION_REVIEW
-        print("\n--- Verification Report ---")
-        print(verification_report)
-        print("---------------------------")
-        print(
-            "Review the changes. Type '/accept_changes' or '/reject_changes [your feedback]'."
-        )
-
-        user_decision = await self._get_user_decision()
-
-        if user_decision.startswith("/accept_changes"):
-            await self._commit_changes(task)
-            task.status = "completed"
-        else:
-            # Rerunning the coder with feedback would go here. For now, we just mark as failed.
-            print(
-                "Changes rejected. Marking task as failed. Manual intervention needed."
+            # CODING
+            self.state = OrchestratorState.CODING_PROMPTING
+            prompter = Prompter(
+                self.llm_provider, self.template_manager, self.config, self.project_root
             )
-            task.status = "failed"
+            coder_prompt = await prompter.run(task)
 
+            self.state = OrchestratorState.CODING_IN_PROGRESS
+            coder = Coder(
+                self.llm_provider, self.template_manager, self.config, self.project_root
+            )
+            # Pass the feedback from the previous loop iteration (if any)
+            await coder.run(coder_prompt, verification_feedback=verification_feedback)
+
+            # VERIFICATION
+            self.state = OrchestratorState.VERIFYING
+            verification_report = await self._run_verification(task)
+
+            self.state = OrchestratorState.AWAITING_VERIFICATION_REVIEW
+            print("\n--- Verification Report ---")
+            print(verification_report)
+            print("---------------------------")
+            print(
+                "Review the changes. Type '/accept_changes' or '/reject_changes [your feedback]'."
+            )
+
+            user_decision = await self._get_user_decision()
+
+            if user_decision.lower().startswith("/accept_changes"):
+                await self._commit_changes(task)
+                task.status = "completed"
+                filesystem.save_plan(self.plan_dir / plan.plan_id / "plan.yml", plan)
+                return  # Exit the loop and task cycle successfully
+
+            elif user_decision.lower().startswith("/reject_changes"):
+                feedback_text = user_decision.replace("/reject_changes", "").strip()
+                verification_feedback = (
+                    f"--- Previous Verification Report ---\n{verification_report}\n\n"
+                    f"--- User Feedback for This Attempt ---\n{feedback_text}"
+                )
+                print("Changes rejected. Rerunning Coder with feedback...")
+                # The loop will continue to the next iteration
+            else:
+                print("Invalid command. Aborting task.")
+                break  # Or handle as an error
+
+        print(
+            f"Task '{task.id}' failed after {max_retries} attempts. Manual intervention needed."
+        )
+        task.status = "failed"
         filesystem.save_plan(self.plan_dir / plan.plan_id / "plan.yml", plan)
 
     async def _run_verification(self, task: Task) -> str:
-        """Runs all configured verification steps."""
+        """Runs all configured verification steps, including commands and agents."""
         diff = git.get_git_diff(self.project_root)
         reports: list[str] = []
+
+        # Run automated commands
+        command_reports: list[str] = []
+        print("Orchestrator: Running automated verification commands...")
+        for cmd_config in self.config.verification.commands:
+            try:
+                result = subprocess.run(
+                    cmd_config.command.split(),
+                    cwd=self.project_root,
+                    capture_output=True,
+                    text=True,
+                    check=False,  # Use False to capture output even on failure
+                )
+                status = "PASS" if result.returncode == 0 else "FAIL"
+                report_line = f"- **{cmd_config.name}:** {status}"
+                if status == "FAIL":
+                    report_line += f"\n  ```\n{result.stdout}\n{result.stderr}\n  ```"
+                command_reports.append(report_line)
+            except Exception as e:
+                command_reports.append(
+                    f"- **{cmd_config.name}:** ERROR\n  ```\n{e}\n  ```"
+                )
+
+        if command_reports:
+            reports.append("## Automated Checks\n\n" + "\n".join(command_reports))
 
         # Agent verifiers
         verifiers = self.config.verifier_instances.model_dump()

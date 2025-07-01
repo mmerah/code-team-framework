@@ -1,7 +1,7 @@
 from claude_code_sdk import AssistantMessage, TextBlock
 
 from code_team.agents.base import Agent
-from code_team.utils import filesystem
+from code_team.utils import filesystem, parsing
 
 
 class Planner(Agent):
@@ -90,7 +90,12 @@ class Planner(Agent):
             )
             return {}
 
+        plan_yaml = parsing.extract_code_block(parts[0], "yaml") or parts[0].strip()
+        acceptance_md = (
+            parsing.extract_code_block(parts[1], "markdown") or parts[1].strip()
+        )
+
         return {
-            "plan.yml": parts[0].strip(),
-            "ACCEPTANCE_CRITERIA.md": parts[1].strip(),
+            "plan.yml": plan_yaml,
+            "ACCEPTANCE_CRITERIA.md": acceptance_md,
         }
