@@ -1,5 +1,3 @@
-from claude_code_sdk import AssistantMessage, TextBlock
-
 from code_team.agents.base import Agent
 from code_team.models.plan import Task
 
@@ -17,16 +15,10 @@ class Prompter(Agent):
         Returns:
             A detailed prompt string for the Coder agent.
         """
-        print(f"Prompter: Generating detailed instructions for task '{task.id}'...")
         system_prompt = self.templates.render("PROMPTER_INSTRUCTIONS.md")
         prompt = f"Generate the coder prompt for this task:\nID: {task.id}\nDescription: {task.description}"
 
-        coder_prompt = ""
-        async for message in self.llm.query(prompt=prompt, system_prompt=system_prompt):
-            if isinstance(message, AssistantMessage):
-                for block in message.content:
-                    if isinstance(block, TextBlock):
-                        coder_prompt += block.text
+        llm_stream = self.llm.query(prompt=prompt, system_prompt=system_prompt)
+        coder_prompt = await self._stream_and_collect_response(llm_stream)
 
-        print(f"Prompter: Instructions for '{task.id}' generated.")
-        return coder_prompt.strip()
+        return coder_prompt
