@@ -2,7 +2,7 @@ version: 1.0
 
 # LLM provider configuration, passed to Claude Code SDK
 llm:
-  model: "claude-3-5-sonnet-20240620"
+  model: "sonnet"
 
 # Agent-specific configurations
 agents:
