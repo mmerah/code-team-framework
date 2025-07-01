@@ -2,7 +2,7 @@ from pydantic import BaseModel, Field
 
 
 class LLMConfig(BaseModel):
-    model: str = "claude-3-5-sonnet-20240620"
+    model: str = "sonnet"
 
 
 class CoderAgentConfig(BaseModel):
