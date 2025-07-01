@@ -12,7 +12,21 @@ class CodeVerifier(Agent):
     def __init__(self, verifier_type: str, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
         self.verifier_type = verifier_type
-        self.instruction_file = f"VERIFIER_{verifier_type.upper()}_INSTRUCTIONS.md"
+        self.instruction_file = self._get_instruction_filename(verifier_type)
+
+    def _get_instruction_filename(self, verifier_type: str) -> str:
+        """Maps verifier types to their corresponding instruction filenames."""
+        mapping = {
+            "architecture": "VERIFIER_ARCH_INSTRUCTIONS.md",
+            "task_completion": "VERIFIER_TASK_INSTRUCTIONS.md",
+            "security": "VERIFIER_SEC_INSTRUCTIONS.md",
+            "performance": "VERIFIER_PERF_INSTRUCTIONS.md",
+        }
+
+        if verifier_type not in mapping:
+            raise ValueError(f"Unknown verifier type: {verifier_type}")
+
+        return mapping[verifier_type]
 
     async def run(self, task: Task, diff: str) -> str:  # type: ignore[override]
         """

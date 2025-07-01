@@ -9,7 +9,6 @@ from code_team.agents.committer import Committer
 from code_team.agents.plan_verifier import PlanVerifier
 from code_team.agents.planner import Planner
 from code_team.agents.prompter import Prompter
-from code_team.agents.situation_evaluator import SituationEvaluator
 from code_team.agents.verifiers import CodeVerifier
 from code_team.models.config import CodeTeamConfig
 from code_team.models.plan import Plan, Task
@@ -119,7 +118,7 @@ class Orchestrator:
             OrchestratorState.PLAN_COMPLETE,
             OrchestratorState.HALTED_FOR_ERROR,
         ]:
-            task_id = await self._select_next_task(plan)
+            task_id = self._select_next_task(plan)
             if task_id == "PLAN_COMPLETE":
                 self.state = OrchestratorState.PLAN_COMPLETE
                 print("\n🎉 Plan complete! All tasks have been finished.")
@@ -211,11 +210,23 @@ class Orchestrator:
         else:
             print(f"Failed to commit changes for task '{task.id}'.")
 
-    async def _select_next_task(self, plan: Plan) -> str:
-        evaluator = SituationEvaluator(
-            self.llm_provider, self.template_manager, self.config, self.project_root
-        )
-        return await evaluator.run(plan)
+    def _select_next_task(self, plan: Plan) -> str:
+        """Deterministically finds the next pending task whose dependencies are met."""
+        print("Orchestrator: Determining next task...")
+
+        completed_task_ids = {
+            task.id for task in plan.tasks if task.status == "completed"
+        }
+
+        for task in plan.tasks:
+            if task.status == "pending" and all(
+                dep_id in completed_task_ids for dep_id in task.dependencies
+            ):
+                print(f"Orchestrator: Next task is '{task.id}'.")
+                return task.id
+
+        print("Orchestrator: All tasks are complete.")
+        return "PLAN_COMPLETE"
 
     def _get_latest_plan(self) -> Plan | None:
         """Finds the most recent plan file."""
