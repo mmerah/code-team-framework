@@ -11,6 +11,7 @@ from claude_code_sdk import (
     TextBlock,
     ToolUseBlock,
 )
+from rich.live import Live
 
 from code_team.models.config import CodeTeamConfig
 from code_team.utils.exceptions import ExceptionGroup
@@ -47,49 +48,69 @@ class Agent(ABC):
         Streams agent activity to the console and collects the final text response.
         """
         full_response_parts: list[str] = []
-        display.agent_thought(self.name, "is thinking...")
+        accumulated_content: list[str] = []
 
-        try:
-            async for message in llm_stream:
-                if isinstance(message, AssistantMessage):
-                    for block in message.content:
-                        if isinstance(block, TextBlock):
-                            full_response_parts.append(block.text)
-                            if text_content := block.text.strip():
-                                # Use rich's markup escaping for user-generated content
-                                escaped_text = text_content.replace("[", "[[").replace(
-                                    "]", "]]"
+        # Create initial panel with "thinking..." message
+        panel = display.create_agent_panel(self.name, "Thinking...")
+
+        with Live(
+            panel, console=display.console, refresh_per_second=4, transient=False
+        ) as live:
+            try:
+                async for message in llm_stream:
+                    if isinstance(message, AssistantMessage):
+                        for block in message.content:
+                            if isinstance(block, TextBlock):
+                                full_response_parts.append(block.text)
+                                if text_content := block.text.strip():
+                                    # Use rich's markup escaping for user-generated content
+                                    escaped_text = text_content.replace(
+                                        "[", "[["
+                                    ).replace("]", "]]")
+                                    accumulated_content.append(escaped_text)
+                                    # Update the panel with accumulated content
+                                    full_content = "\n".join(accumulated_content)
+                                    panel = display.create_agent_panel(
+                                        self.name, full_content
+                                    )
+                                    live.update(panel)
+                            elif isinstance(block, ToolUseBlock):
+                                tool_text = f"[bold yellow]↳ Tool Use:[/bold yellow] [bold magenta]{block.name}[/bold magenta]"
+                                accumulated_content.append(tool_text)
+                                for key, value in block.input.items():
+                                    escaped_value = (
+                                        str(value).replace("[", "[[").replace("]", "]]")
+                                    )
+                                    accumulated_content.append(
+                                        f"  [green]{key}:[/green] {escaped_value[:200]}"
+                                    )
+                                # Update panel with tool use info
+                                full_content = "\n".join(accumulated_content)
+                                panel = display.create_agent_panel(
+                                    self.name, full_content
                                 )
-                                display.print(f"  [grey50]{escaped_text}[/grey50]")
-                        elif isinstance(block, ToolUseBlock):
-                            display.print(
-                                f"  [bold yellow]↳ Tool Use:[/bold yellow] [bold magenta]{block.name}[/bold magenta]"
-                            )
-                            for key, value in block.input.items():
-                                escaped_value = (
-                                    str(value).replace("[", "[[").replace("]", "]]")
-                                )
-                                display.print(
-                                    f"    [green]{key}:[/green] {escaped_value[:200]}"
-                                )
-                elif isinstance(message, ResultMessage) and message.is_error:
-                    display.print(
-                        f"  [bold red]Result: Error ({message.subtype})[/bold red]"
-                    )
-        except ExceptionGroup as eg:
-            display.warning(
-                "Stream interrupted due to SDK error. Partial response collected."
-            )
-            for exc in eg.exceptions:
-                if hasattr(exc, "args") and exc.args:
-                    display.warning(f"  Error: {exc.args[0]}")
-            raise
-        except Exception as e:
-            display.warning(f"Stream interrupted: {e}. Partial response collected.")
-            raise
+                                live.update(panel)
+                    elif isinstance(message, ResultMessage) and message.is_error:
+                        error_text = (
+                            f"[bold red]Result: Error ({message.subtype})[/bold red]"
+                        )
+                        accumulated_content.append(error_text)
+                        full_content = "\n".join(accumulated_content)
+                        panel = display.create_agent_panel(self.name, full_content)
+                        live.update(panel)
+            except ExceptionGroup as eg:
+                display.warning(
+                    "Stream interrupted due to SDK error. Partial response collected."
+                )
+                for exc in eg.exceptions:
+                    if hasattr(exc, "args") and exc.args:
+                        display.warning(f"  Error: {exc.args[0]}")
+                raise
+            except Exception as e:
+                display.warning(f"Stream interrupted: {e}. Partial response collected.")
+                raise
 
         collected_response = "".join(full_response_parts).strip()
-        display.agent_thought(self.name, "finished.")
         return collected_response
 
     async def _robust_llm_query(

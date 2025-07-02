@@ -3,7 +3,7 @@
 from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import Any
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 from claude_code_sdk import (
@@ -57,11 +57,16 @@ class TestAgent:
         assert self.agent.name == "ConcreteAgent"
 
     @pytest.mark.asyncio
+    @patch("code_team.agents.base.Live")
     @patch("code_team.agents.base.display")
     async def test_stream_and_collect_response_text_only(
-        self, mock_display: Mock
+        self, mock_display: Mock, mock_live: Mock
     ) -> None:
         """Test streaming and collecting text-only response."""
+        # Mock the Live context manager
+        mock_live_instance = MagicMock()
+        mock_live.return_value = mock_live_instance
+
         # Mock messages
         text_block = TextBlock(text="This is a test response")
         message = AssistantMessage(content=[text_block])
@@ -72,15 +77,20 @@ class TestAgent:
         result = await self.agent._stream_and_collect_response(mock_stream())
 
         assert result == "This is a test response"
-        mock_display.agent_thought.assert_called()
-        mock_display.print.assert_called()
+        # Verify create_agent_panel was called for the Live display
+        mock_display.create_agent_panel.assert_called()
 
     @pytest.mark.asyncio
+    @patch("code_team.agents.base.Live")
     @patch("code_team.agents.base.display")
     async def test_stream_and_collect_response_with_tools(
-        self, mock_display: Mock
+        self, mock_display: Mock, mock_live: Mock
     ) -> None:
         """Test streaming response with tool use."""
+        # Mock the Live context manager
+        mock_live_instance = MagicMock()
+        mock_live.return_value = mock_live_instance
+
         text_block = Mock(spec=TextBlock)
         text_block.text = "I'll use a tool"
 
@@ -97,15 +107,20 @@ class TestAgent:
         result = await self.agent._stream_and_collect_response(mock_stream())
 
         assert result == "I'll use a tool"
-        mock_display.agent_thought.assert_called()
-        mock_display.print.assert_called()
+        # Verify create_agent_panel was called for the Live display
+        mock_display.create_agent_panel.assert_called()
 
     @pytest.mark.asyncio
+    @patch("code_team.agents.base.Live")
     @patch("code_team.agents.base.display")
     async def test_stream_and_collect_response_with_error(
-        self, mock_display: Mock
+        self, mock_display: Mock, mock_live: Mock
     ) -> None:
         """Test streaming response with error result."""
+        # Mock the Live context manager
+        mock_live_instance = MagicMock()
+        mock_live.return_value = mock_live_instance
+
         text_block = Mock(spec=TextBlock)
         text_block.text = "Some text"
 
@@ -123,15 +138,20 @@ class TestAgent:
         result = await self.agent._stream_and_collect_response(mock_stream())
 
         assert result == "Some text"
-        mock_display.agent_thought.assert_called()
-        mock_display.print.assert_called()
+        # Verify create_agent_panel was called for the Live display
+        mock_display.create_agent_panel.assert_called()
 
     @pytest.mark.asyncio
+    @patch("code_team.agents.base.Live")
     @patch("code_team.agents.base.display")
     async def test_stream_and_collect_response_multiple_messages(
-        self, mock_display: Mock
+        self, mock_display: Mock, mock_live: Mock
     ) -> None:
         """Test streaming multiple messages."""
+        # Mock the Live context manager
+        mock_live_instance = MagicMock()
+        mock_live.return_value = mock_live_instance
+
         text_block1 = TextBlock(text="First part ")
         text_block2 = TextBlock(text="second part.")
         message1 = AssistantMessage(content=[text_block1])
@@ -146,11 +166,15 @@ class TestAgent:
         assert result == "First part second part."
 
     @pytest.mark.asyncio
+    @patch("code_team.agents.base.Live")
     @patch("code_team.agents.base.display")
     async def test_stream_and_collect_response_empty_stream(
-        self, mock_display: Mock
+        self, mock_display: Mock, mock_live: Mock
     ) -> None:
         """Test streaming empty response."""
+        # Mock the Live context manager
+        mock_live_instance = MagicMock()
+        mock_live.return_value = mock_live_instance
 
         async def mock_stream() -> AsyncIterator[Message]:
             return
@@ -159,14 +183,20 @@ class TestAgent:
         result = await self.agent._stream_and_collect_response(mock_stream())
 
         assert result == ""
-        assert mock_display.agent_thought.call_count >= 2
+        # Verify create_agent_panel was called at least once (for initial "Thinking..." panel)
+        mock_display.create_agent_panel.assert_called()
 
     @pytest.mark.asyncio
+    @patch("code_team.agents.base.Live")
     @patch("code_team.agents.base.display")
     async def test_stream_and_collect_response_markup_escaping(
-        self, mock_display: Mock
+        self, mock_display: Mock, mock_live: Mock
     ) -> None:
         """Test that markup characters are properly escaped."""
+        # Mock the Live context manager
+        mock_live_instance = MagicMock()
+        mock_live.return_value = mock_live_instance
+
         text_block = TextBlock(text="Text with [markup] and [/markup]")
         message = AssistantMessage(content=[text_block])
 
@@ -176,17 +206,25 @@ class TestAgent:
         result = await self.agent._stream_and_collect_response(mock_stream())
 
         assert result == "Text with [markup] and [/markup]"
-        mock_display.print.assert_called()
-        call_args = mock_display.print.call_args[0][0]
-        assert "[[markup]]" in call_args
-        assert "[[/markup]]" in call_args
+        # Verify create_agent_panel was called and content includes escaped markup
+        mock_display.create_agent_panel.assert_called()
+        # Check that the panel content has escaped markup
+        call_args = mock_display.create_agent_panel.call_args_list
+        panel_content = str(call_args)
+        assert "[[markup]]" in panel_content
+        assert "[[/markup]]" in panel_content
 
     @pytest.mark.asyncio
+    @patch("code_team.agents.base.Live")
     @patch("code_team.agents.base.display")
     async def test_stream_and_collect_response_tool_value_escaping(
-        self, mock_display: Mock
+        self, mock_display: Mock, mock_live: Mock
     ) -> None:
         """Test that tool input values are properly escaped."""
+        # Mock the Live context manager
+        mock_live_instance = MagicMock()
+        mock_live.return_value = mock_live_instance
+
         tool_block = Mock(spec=ToolUseBlock)
         tool_block.name = "Write"
         tool_block.input = {"content": "Content with [markup] here"}
@@ -199,13 +237,12 @@ class TestAgent:
 
         await self.agent._stream_and_collect_response(mock_stream())
 
-        mock_display.print.assert_called()
-        calls = mock_display.print.call_args_list
-        content_call = next(
-            (call for call in calls if "content:" in str(call[0][0])), None
-        )
-        assert content_call is not None
-        assert "[[markup]]" in str(content_call[0][0])
+        # Verify create_agent_panel was called and content includes escaped markup
+        mock_display.create_agent_panel.assert_called()
+        # Check that the panel content has escaped markup in tool output
+        call_args = mock_display.create_agent_panel.call_args_list
+        panel_content = str(call_args)
+        assert "[[markup]]" in panel_content
 
     @pytest.mark.asyncio
     async def test_run_method_abstract(self) -> None:
