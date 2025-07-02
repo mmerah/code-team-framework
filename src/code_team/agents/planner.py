@@ -1,10 +1,8 @@
 from claude_code_sdk import AssistantMessage, TextBlock
-from rich.console import Console
 
 from code_team.agents.base import Agent
 from code_team.utils import filesystem, parsing
-
-console = Console()
+from code_team.utils.ui import display, interactive
 
 
 class Planner(Agent):
@@ -21,16 +19,18 @@ class Planner(Agent):
             A dictionary containing the content for `plan.yml` and
             `ACCEPTANCE_CRITERIA.md`.
         """
-        print(
-            "Planner: Hello! Let's create a plan. To start, I need to understand the project structure."
+        display.agent_thought(
+            "Planner",
+            "Hello! Let's create a plan. To start, I need to understand the project structure.",
         )
         repo_map = filesystem.get_repo_map(self.project_root)
         filesystem.write_file(
             self.project_root / "config/agent_instructions/REPO_MAP.md", repo_map
         )
 
-        print(
-            f"Planner: Based on your request '{initial_request}', I'll ask some clarifying questions."
+        display.agent_thought(
+            "Planner",
+            f"Based on your request '{initial_request}', I'll ask some clarifying questions.",
         )
 
         conversation_history = [f"User request: {initial_request}"]
@@ -43,9 +43,9 @@ class Planner(Agent):
             )
 
             response_text = await self._get_planner_response(system_prompt, full_prompt)
-            print(f"\nPlanner: {response_text}")
+            display.agent_thought("Planner", response_text)
 
-            user_input = input("You: ").strip()
+            user_input = interactive.get_text_input("You").strip()
 
             if user_input.lower() == "/save_plan":
                 return await self._generate_final_plan(conversation_history)
@@ -57,9 +57,7 @@ class Planner(Agent):
     async def _get_planner_response(self, system_prompt: str, prompt: str) -> str:
         """Gets a single response from the LLM, streaming 'thinking' status."""
         response_text = ""
-        console.print(
-            f"[bold cyan]>[/bold cyan] [bold]{self.name}[/bold] is thinking..."
-        )
+        display.agent_thought(self.name, "is thinking...")
         async for message in self.llm.query(prompt=prompt, system_prompt=system_prompt):
             if isinstance(message, AssistantMessage):
                 for block in message.content:
@@ -86,8 +84,9 @@ class Planner(Agent):
 
         parts = response_text.split("---_---")
         if len(parts) != 2:
-            print(
-                "Planner: I had trouble generating the plan in the correct format. Please try again."
+            display.agent_thought(
+                "Planner",
+                "I had trouble generating the plan in the correct format. Please try again.",
             )
             return {}
 

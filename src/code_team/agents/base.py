@@ -10,13 +10,11 @@ from claude_code_sdk import (
     TextBlock,
     ToolUseBlock,
 )
-from rich.console import Console
 
 from code_team.models.config import CodeTeamConfig
 from code_team.utils.llm import LLMProvider
 from code_team.utils.templates import TemplateManager
-
-console = Console()
+from code_team.utils.ui import display
 
 
 class Agent(ABC):
@@ -46,9 +44,7 @@ class Agent(ABC):
         Streams agent activity to the console and collects the final text response.
         """
         full_response_parts: list[str] = []
-        console.print(
-            f"[bold cyan]>[/bold cyan] [bold]{self.name}[/bold] is thinking..."
-        )
+        display.agent_thought(self.name, "is thinking...")
 
         async for message in llm_stream:
             if isinstance(message, AssistantMessage):
@@ -59,28 +55,28 @@ class Agent(ABC):
                             escaped_text = text_content.replace("[", "[[").replace(
                                 "]", "]]"
                             )
-                            console.print(
+                            display.print(
                                 f"  [grey50]Thought: {escaped_text[:150]}...[/grey50]"
                             )
                         full_response_parts.append(block.text)
                     elif isinstance(block, ToolUseBlock):
-                        console.print(
+                        display.print(
                             f"  [bold yellow]↳ Tool Use:[/bold yellow] [bold magenta]{block.name}[/bold magenta]"
                         )
                         for key, value in block.input.items():
                             escaped_value = (
                                 str(value).replace("[", "[[").replace("]", "]]")
                             )
-                            console.print(
+                            display.print(
                                 f"    [green]{key}:[/green] {escaped_value[:200]}"
                             )
             elif isinstance(message, ResultMessage) and message.is_error:
-                console.print(
+                display.print(
                     f"  [bold red]Result: Error ({message.subtype})[/bold red]"
                 )
 
         collected_response = "".join(full_response_parts).strip()
-        console.print(f"[bold cyan]<[/bold cyan] [bold]{self.name}[/bold] finished.")
+        display.agent_thought(self.name, "finished.")
         return collected_response
 
     @abstractmethod

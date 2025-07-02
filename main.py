@@ -3,7 +3,8 @@ from pathlib import Path
 
 import typer
 
-from src.code_team.orchestrator.orchestrator import Orchestrator
+from code_team.orchestrator.orchestrator import Orchestrator
+from code_team.utils.ui import interactive
 
 app = typer.Typer(help="Code Team Framework Orchestrator")
 
@@ -24,7 +25,7 @@ def plan(
     try:
         initial_request = request
         if not initial_request:
-            initial_request = input("Enter your request: ").strip()
+            initial_request = interactive.get_text_input("Enter your request").strip()
 
         if initial_request:
             asyncio.run(orchestrator.run_plan_phase(initial_request=initial_request))
