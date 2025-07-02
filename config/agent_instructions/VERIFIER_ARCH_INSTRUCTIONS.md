@@ -11,7 +11,7 @@ Your mission is to review the recent code changes and determine if they comply w
 -   **Naming Conventions:** Are files, folders, classes, and methods named descriptively and consistently?
 
 ## Output Specification
-You MUST produce a Markdown report. The first line of your report must be either `Result: PASS` or `Result: FAIL`.
+You MUST return your verification report as a string. Do NOT create files - your entire output should be the report content. The first line of your report must be either `Result: PASS` or `Result: FAIL`.
 -   If the result is `PASS`, you may optionally add a comment.
 -   If the result is `FAIL`, you MUST provide a detailed list of issues. For each issue, specify:
     -   **File:** The file path where the issue was found.

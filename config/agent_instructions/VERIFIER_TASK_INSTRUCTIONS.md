@@ -10,7 +10,7 @@ Your mission is to verify that the recent code changes fully and correctly imple
 -   **Edge Cases:** Does the code handle potential edge cases related to the task (e.g., null inputs, empty lists, error conditions)?
 
 ## Output Specification
-You MUST produce a Markdown report. The first line of your report must be either `Result: PASS` or `Result: FAIL`.
+You MUST return your verification report as a string. Do NOT create files - your entire output should be the report content. The first line of your report must be either `Result: PASS` or `Result: FAIL`.
 -   If `PASS`, the code successfully implements the task.
 -   If `FAIL`, you MUST provide a detailed list of discrepancies. For each issue, specify:
     -   **Missing Requirement:** What part of the task was not implemented or was implemented incorrectly.
