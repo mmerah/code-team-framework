@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from claude_code_sdk import (
     AssistantMessage,
     Message,
@@ -5,13 +7,29 @@ from claude_code_sdk import (
     TextBlock,
     ToolUseBlock,
 )
-from rich.console import Console
+from rich.live import Live
 
 from code_team.agents.base import Agent
+from code_team.models.config import CodeTeamConfig
+from code_team.utils.llm import LLMProvider
+from code_team.utils.templates import TemplateManager
+from code_team.utils.ui import display
 
 
 class Coder(Agent):
     """Executes a detailed prompt to modify the codebase."""
+
+    def __init__(
+        self,
+        llm_provider: LLMProvider,
+        template_manager: TemplateManager,
+        config: CodeTeamConfig,
+        project_root: Path,
+    ) -> None:
+        """Initialize the Coder agent."""
+        super().__init__(llm_provider, template_manager, config, project_root)
+        self._live_display: Live | None = None
+        self._current_tool_info: list[str] = []
 
     async def run(  # type: ignore[override]
         self, coder_prompt: str, verification_feedback: str | None = None
@@ -45,17 +63,26 @@ class Coder(Agent):
             allowed_tools=allowed_tools,
         )
 
-        # Custom streaming for Coder since it needs to handle ResultMessage differently
-        async for message in llm_stream:
-            # Let the base class handle AssistantMessage and other message types
-            # by manually calling the streaming logic without the "finished" message
-            await self._handle_coder_message(message)
+        # Create a Live display for real-time tool usage updates
+        with display.create_live_display() as live:
+            self._live_display = live
+            self._current_tool_info = []
+
+            # Custom streaming for Coder since it needs to handle ResultMessage differently
+            async for message in llm_stream:
+                # Let the base class handle AssistantMessage and other message types
+                # by manually calling the streaming logic without the "finished" message
+                await self._handle_coder_message(message)
+
+            # Clear the live display reference
+            self._live_display = None
+            self._current_tool_info = []
 
         return True
 
     async def _handle_coder_message(self, message: Message) -> None:
         """Handle individual messages from the Coder's LLM stream."""
-        console = Console()
+        # Using the global display manager
 
         if isinstance(message, AssistantMessage):
             for block in message.content:
@@ -65,17 +92,50 @@ class Coder(Agent):
                         escaped_text = text_content.replace("[", "[[").replace(
                             "]", "]]"
                         )
-                        console.print(
-                            f"  [grey50]Coder: {escaped_text[:150]}...[/grey50]"
-                        )
+
+                        # Update live display if available
+                        if hasattr(self, "_live_display") and self._live_display:
+                            # Build current display content
+                            display_lines = []
+                            if self._current_tool_info:
+                                display_lines.extend(self._current_tool_info)
+                            display_lines.append(
+                                f"[grey50]💭 Coder thinking: {escaped_text[:100]}...[/grey50]"
+                            )
+                            self._live_display.update("\n".join(display_lines))
+                        else:
+                            display.print(
+                                f"  [grey50]Coder: {escaped_text[:150]}...[/grey50]"
+                            )
                 elif isinstance(block, ToolUseBlock):
-                    console.print(
-                        f"  [bold yellow]↳ Tool Use:[/bold yellow] [bold magenta]{block.name}[/bold magenta]"
-                    )
+                    # Format tool usage information
+                    tool_info = [
+                        f"[bold yellow]🔧 Tool Use:[/bold yellow] [bold magenta]{block.name}[/bold magenta]"
+                    ]
                     for key, value in block.input.items():
                         escaped_value = str(value).replace("[", "[[").replace("]", "]]")
-                        console.print(
-                            f"    [green]{key}:[/green] {escaped_value[:200]}"
+                        tool_info.append(
+                            f"  [green]{key}:[/green] {escaped_value[:200]}"
                         )
+
+                    # Update live display if available
+                    if hasattr(self, "_live_display") and self._live_display:
+                        self._current_tool_info = tool_info
+                        self._live_display.update("\n".join(tool_info))
+                    else:
+                        for line in tool_info:
+                            display.print(f"  {line}")
         elif isinstance(message, ResultMessage) and message.is_error:
-            console.print(f"  [bold red]Result: Error ({message.subtype})[/bold red]")
+            error_msg = f"[bold red]❌ Result: Error ({message.subtype})[/bold red]"
+
+            # Update live display if available
+            if hasattr(self, "_live_display") and self._live_display:
+                display_lines = []
+                if self._current_tool_info:
+                    display_lines.extend(self._current_tool_info)
+                display_lines.append(error_msg)
+                self._live_display.update("\n".join(display_lines))
+                # Clear the current tool info after showing error
+                self._current_tool_info = []
+            else:
+                display.print(f"  {error_msg}")

@@ -22,10 +22,25 @@ repos:
         language: system
         pass_filenames: false
         files: ^src/.*\.py$
-        
+
+      - id: mypy-test
+        name: Type check tests/ with mypy
+        entry: mypy tests --strict
+        language: system
+        pass_filenames: false
+        files: ^tests/.*\.py$
+
       - id: mypy-main
         name: Type check main.py with mypy
         entry: mypy main.py --strict
         language: system
         pass_filenames: false
         files: ^main\.py$
+
+      # Run pytest
+      - id: pytest
+        name: Run pytest
+        entry: pytest
+        language: system
+        pass_filenames: false
+        always_run: true

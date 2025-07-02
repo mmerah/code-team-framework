@@ -15,6 +15,7 @@ from code_team.models.config import CodeTeamConfig
 from code_team.models.plan import Plan, Task
 from code_team.orchestrator.state import OrchestratorState
 from code_team.utils import filesystem, git, llm, templates
+from code_team.utils.ui import display, interactive
 
 
 class Orchestrator:
@@ -56,7 +57,7 @@ class Orchestrator:
 
         if not plan_files:
             self.state = OrchestratorState.HALTED_FOR_ERROR
-            print("Failed to generate plan files.")
+            display.error("Failed to generate plan files.")
             return
 
         plan_id = f"plan-{len(list(self.plan_dir.iterdir())) + 1:04d}"
@@ -70,21 +71,18 @@ class Orchestrator:
         )
 
         self.state = OrchestratorState.PLANNING_AWAITING_REVIEW
-        print(f"\nPlan '{plan_id}' created in {current_plan_dir}")
-        print(
-            "Review the plan. To verify it, type '/verify_plan'. To accept, type '/accept_plan'."
-        )
-
+        display.success(f"Plan '{plan_id}' created in {current_plan_dir}")
         # Simple interactive loop for plan review
         while self.state == OrchestratorState.PLANNING_AWAITING_REVIEW:
-            user_input = input("> ").strip()
+            user_input = interactive.get_menu_choice(
+                "Review the plan and choose an action:",
+                ["/verify_plan", "/accept_plan"],
+            )
             if user_input == "/verify_plan":
                 await self._verify_plan(current_plan_dir)
             elif user_input == "/accept_plan":
-                print("Plan accepted. You can now run the coding phase.")
+                display.success("Plan accepted. You can now run the coding phase.")
                 break
-            else:
-                print("Invalid command.")
 
     async def _verify_plan(self, plan_dir: Path) -> None:
         self.state = OrchestratorState.PLANNING_VERIFYING
@@ -100,42 +98,65 @@ class Orchestrator:
         feedback = await verifier.run(plan_content, criteria_content)
         filesystem.write_file(plan_dir / "FEEDBACK.md", feedback)
 
-        print("\n--- Plan Verification Feedback ---")
-        print(feedback)
-        print("---------------------------------")
+        display.panel(feedback, title="Plan Verification Feedback")
 
         self.state = OrchestratorState.PLANNING_AWAITING_REVIEW
-        print("You can now revise the plan manually or '/accept_plan'.")
+        display.info("You can now revise the plan manually or '/accept_plan'.")
 
     async def run_code_phase(self) -> None:
         """Runs the main coding and verification loop."""
         plan = self._get_latest_plan()
         if not plan:
-            print("No active plan found. Please run the planning phase first.")
+            display.error("No active plan found. Please run the planning phase first.")
             return
 
-        self.state = OrchestratorState.CODING_AWAITING_TASK_SELECTION
-        while self.state not in [
-            OrchestratorState.PLAN_COMPLETE,
-            OrchestratorState.HALTED_FOR_ERROR,
-        ]:
-            task_id = self._select_next_task(plan)
-            if task_id == "PLAN_COMPLETE":
-                self.state = OrchestratorState.PLAN_COMPLETE
-                print("\n🎉 Plan complete! All tasks have been finished.")
-                break
+        # Count pending tasks for progress tracking
+        pending_tasks = [t for t in plan.tasks if t.status == "pending"]
+        total_tasks = len(pending_tasks)
 
-            task = next((t for t in plan.tasks if t.id == task_id), None)
-            if not task:
-                self.state = OrchestratorState.HALTED_FOR_ERROR
-                print(f"Error: Task '{task_id}' not found in plan.")
-                break
+        if total_tasks == 0:
+            display.success("🎉 All tasks are already completed!")
+            return
 
-            await self._execute_task_cycle(plan, task)
-            # Reload plan to get updated task statuses
-            plan = self._get_latest_plan()
-            if not plan:
-                break
+        # Create overall progress bar
+        overall_progress = display.create_overall_progress()
+
+        with overall_progress:
+            overall_task = overall_progress.add_task(
+                f"[progress]Executing {total_tasks} tasks...[/progress]",
+                total=total_tasks,
+            )
+
+            self.state = OrchestratorState.CODING_AWAITING_TASK_SELECTION
+            while self.state not in [
+                OrchestratorState.PLAN_COMPLETE,
+                OrchestratorState.HALTED_FOR_ERROR,
+            ]:
+                task_id = self._select_next_task(plan)
+                if task_id == "PLAN_COMPLETE":
+                    self.state = OrchestratorState.PLAN_COMPLETE
+                    overall_progress.update(overall_task, completed=total_tasks)
+                    display.success("🎉 Plan complete! All tasks have been finished.")
+                    break
+
+                task = next((t for t in plan.tasks if t.id == task_id), None)
+                if not task:
+                    self.state = OrchestratorState.HALTED_FOR_ERROR
+                    display.error(f"Task '{task_id}' not found in plan.")
+                    break
+
+                await self._execute_task_cycle(plan, task)
+
+                # Update progress
+                completed_count = len(
+                    [t for t in plan.tasks if t.status == "completed"]
+                )
+                overall_progress.update(overall_task, completed=completed_count)
+
+                # Reload plan to get updated task statuses
+                plan = self._get_latest_plan()
+                if not plan:
+                    break
 
     async def _execute_task_cycle(self, plan: Plan, task: Task) -> None:
         """Handles the full lifecycle for a single task, allowing for retries."""
@@ -146,31 +167,53 @@ class Orchestrator:
         while current_try < max_retries:
             current_try += 1
 
-            # CODING
-            self.state = OrchestratorState.CODING_PROMPTING
-            prompter = Prompter(
-                self.llm_provider, self.template_manager, self.config, self.project_root
-            )
-            coder_prompt = await prompter.run(task)
+            # Create task-level progress indicator
+            task_progress = display.create_task_progress()
 
-            self.state = OrchestratorState.CODING_IN_PROGRESS
-            coder = Coder(
-                self.llm_provider, self.template_manager, self.config, self.project_root
-            )
-            # Pass the feedback from the previous loop iteration (if any)
-            await coder.run(coder_prompt, verification_feedback=verification_feedback)
+            with task_progress:
+                # CODING
+                self.state = OrchestratorState.CODING_PROMPTING
+                prompting_task = task_progress.add_task(
+                    f"[progress]Preparing prompt for task {task.id}...[/progress]"
+                )
 
-            # VERIFICATION
-            self.state = OrchestratorState.VERIFYING
-            verification_report = await self._run_verification(task)
+                prompter = Prompter(
+                    self.llm_provider,
+                    self.template_manager,
+                    self.config,
+                    self.project_root,
+                )
+                coder_prompt = await prompter.run(task)
+                task_progress.update(prompting_task, completed=1)
+
+                self.state = OrchestratorState.CODING_IN_PROGRESS
+                coding_task = task_progress.add_task(
+                    f"[progress]Coder working on task {task.id}...[/progress]"
+                )
+
+                coder = Coder(
+                    self.llm_provider,
+                    self.template_manager,
+                    self.config,
+                    self.project_root,
+                )
+                # Pass the feedback from the previous loop iteration (if any)
+                await coder.run(
+                    coder_prompt, verification_feedback=verification_feedback
+                )
+                task_progress.update(coding_task, completed=1)
+
+                # VERIFICATION
+                self.state = OrchestratorState.VERIFYING
+                verify_task = task_progress.add_task(
+                    f"[progress]Verifying changes for task {task.id}...[/progress]"
+                )
+
+                verification_report = await self._run_verification(task)
+                task_progress.update(verify_task, completed=1)
 
             self.state = OrchestratorState.AWAITING_VERIFICATION_REVIEW
-            print("\n--- Verification Report ---")
-            print(verification_report)
-            print("---------------------------")
-            print(
-                "Review the changes. Type '/accept_changes' or '/reject_changes [your feedback]'."
-            )
+            display.panel(verification_report, title="Verification Report")
 
             user_decision = await self._get_user_decision()
 
@@ -186,13 +229,13 @@ class Orchestrator:
                     f"--- Previous Verification Report ---\n{verification_report}\n\n"
                     f"--- User Feedback for This Attempt ---\n{feedback_text}"
                 )
-                print("Changes rejected. Rerunning Coder with feedback...")
+                display.warning("Changes rejected. Rerunning Coder with feedback...")
                 # The loop will continue to the next iteration
             else:
-                print("Invalid command. Aborting task.")
+                display.error("Invalid command. Aborting task.")
                 break  # Or handle as an error
 
-        print(
+        display.error(
             f"Task '{task.id}' failed after {max_retries} attempts. Manual intervention needed."
         )
         task.status = "failed"
@@ -205,7 +248,7 @@ class Orchestrator:
 
         # Run automated commands
         command_reports: list[str] = []
-        print("Orchestrator: Running automated verification commands...")
+        display.info("Running automated verification commands...")
         for cmd_config in self.config.verification.commands:
             try:
                 result = subprocess.run(
@@ -252,13 +295,13 @@ class Orchestrator:
         commit_message = await committer.run(task)
 
         if git.commit_changes(self.project_root, commit_message):
-            print(f"Task '{task.id}' committed successfully.")
+            display.success(f"Task '{task.id}' committed successfully.")
         else:
-            print(f"Failed to commit changes for task '{task.id}'.")
+            display.error(f"Failed to commit changes for task '{task.id}'.")
 
     def _select_next_task(self, plan: Plan) -> str:
         """Deterministically finds the next pending task whose dependencies are met."""
-        print("Orchestrator: Determining next task...")
+        display.info("Determining next task...")
 
         completed_task_ids = {
             task.id for task in plan.tasks if task.status == "completed"
@@ -268,10 +311,10 @@ class Orchestrator:
             if task.status == "pending" and all(
                 dep_id in completed_task_ids for dep_id in task.dependencies
             ):
-                print(f"Orchestrator: Next task is '{task.id}'.")
+                display.info(f"Next task is '{task.id}'.")
                 return task.id
 
-        print("Orchestrator: All tasks are complete.")
+        display.info("All tasks are complete.")
         return "PLAN_COMPLETE"
 
     def _get_latest_plan(self) -> Plan | None:
@@ -284,6 +327,22 @@ class Orchestrator:
         return filesystem.load_plan(latest_plan_path)
 
     async def _get_user_decision(self) -> str:
-        """Simple async wrapper for input to allow for future UI integration."""
+        """Get user decision for verification review using interactive menus."""
         loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(None, input, "> ")
+
+        def get_decision() -> str:
+            choice = interactive.get_menu_choice(
+                "Review the changes and choose an action:",
+                ["/accept_changes", "/reject_changes"],
+            )
+            if choice == "/reject_changes":
+                feedback = interactive.get_text_input(
+                    "Provide feedback for rejection (optional)"
+                )
+                if feedback.strip():
+                    return f"/reject_changes {feedback.strip()}"
+                else:
+                    return "/reject_changes"
+            return choice
+
+        return await loop.run_in_executor(None, get_decision)
