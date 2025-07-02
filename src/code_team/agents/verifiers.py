@@ -57,7 +57,8 @@ class CodeVerifier(Agent):
         Please provide your verification report in the specified PASS/FAIL format.
         """
 
-        llm_stream = self.llm.query(prompt=prompt, system_prompt=system_prompt)
-        report = await self._stream_and_collect_response(llm_stream)
+        report = await self._robust_llm_query(
+            prompt=prompt, system_prompt=system_prompt
+        )
 
         return report.strip()

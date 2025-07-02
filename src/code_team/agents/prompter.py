@@ -18,7 +18,8 @@ class Prompter(Agent):
         system_prompt = self.templates.render("PROMPTER_INSTRUCTIONS.md")
         prompt = f"Generate the coder prompt for this task:\nID: {task.id}\nDescription: {task.description}"
 
-        llm_stream = self.llm.query(prompt=prompt, system_prompt=system_prompt)
-        coder_prompt = await self._stream_and_collect_response(llm_stream)
+        coder_prompt = await self._robust_llm_query(
+            prompt=prompt, system_prompt=system_prompt
+        )
 
         return coder_prompt

@@ -5,6 +5,7 @@ from pathlib import Path
 
 import yaml
 
+from code_team.agents.base import Agent
 from code_team.agents.coder import Coder
 from code_team.agents.committer import Committer
 from code_team.agents.plan_verifier import PlanVerifier
@@ -47,13 +48,17 @@ class Orchestrator:
         self.log_dir.mkdir(parents=True, exist_ok=True)
         self.report_dir.mkdir(parents=True, exist_ok=True)
 
+    def _create_agent(self, agent_class: type[Agent]) -> Agent:
+        """Factory method to create agents with consistent configuration."""
+        return agent_class(
+            self.llm_provider, self.template_manager, self.config, self.project_root
+        )
+
     async def run_plan_phase(self, initial_request: str) -> None:
         """Runs the planning phase of the workflow."""
         self.state = OrchestratorState.PLANNING_DRAFTING
-        planner = Planner(
-            self.llm_provider, self.template_manager, self.config, self.project_root
-        )
-        plan_files = await planner.run(initial_request)
+        planner = self._create_agent(Planner)
+        plan_files = await planner.run(initial_request=initial_request)
 
         if not plan_files:
             self.state = OrchestratorState.HALTED_FOR_ERROR
@@ -86,16 +91,16 @@ class Orchestrator:
 
     async def _verify_plan(self, plan_dir: Path) -> None:
         self.state = OrchestratorState.PLANNING_VERIFYING
-        verifier = PlanVerifier(
-            self.llm_provider, self.template_manager, self.config, self.project_root
-        )
+        verifier = self._create_agent(PlanVerifier)
 
         plan_content = filesystem.read_file(plan_dir / "plan.yml") or ""
         criteria_content = (
             filesystem.read_file(plan_dir / "ACCEPTANCE_CRITERIA.md") or ""
         )
 
-        feedback = await verifier.run(plan_content, criteria_content)
+        feedback = await verifier.run(
+            plan_content=plan_content, acceptance_criteria=criteria_content
+        )
         filesystem.write_file(plan_dir / "FEEDBACK.md", feedback)
 
         display.panel(feedback, title="Plan Verification Feedback")
@@ -177,13 +182,8 @@ class Orchestrator:
                     f"[progress]Preparing prompt for task {task.id}...[/progress]"
                 )
 
-                prompter = Prompter(
-                    self.llm_provider,
-                    self.template_manager,
-                    self.config,
-                    self.project_root,
-                )
-                coder_prompt = await prompter.run(task)
+                prompter = self._create_agent(Prompter)
+                coder_prompt = await prompter.run(task=task)
                 task_progress.update(prompting_task, completed=1)
 
                 self.state = OrchestratorState.CODING_IN_PROGRESS
@@ -191,15 +191,11 @@ class Orchestrator:
                     f"[progress]Coder working on task {task.id}...[/progress]"
                 )
 
-                coder = Coder(
-                    self.llm_provider,
-                    self.template_manager,
-                    self.config,
-                    self.project_root,
-                )
+                coder = self._create_agent(Coder)
                 # Pass the feedback from the previous loop iteration (if any)
                 await coder.run(
-                    coder_prompt, verification_feedback=verification_feedback
+                    coder_prompt=coder_prompt,
+                    verification_feedback=verification_feedback,
                 )
                 task_progress.update(coding_task, completed=1)
 
@@ -289,10 +285,8 @@ class Orchestrator:
 
     async def _commit_changes(self, task: Task) -> None:
         self.state = OrchestratorState.COMMITTING
-        committer = Committer(
-            self.llm_provider, self.template_manager, self.config, self.project_root
-        )
-        commit_message = await committer.run(task)
+        committer = self._create_agent(Committer)
+        commit_message = await committer.run(task=task)
 
         if git.commit_changes(self.project_root, commit_message):
             display.success(f"Task '{task.id}' committed successfully.")

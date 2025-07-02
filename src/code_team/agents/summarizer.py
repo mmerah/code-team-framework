@@ -17,7 +17,8 @@ class Summarizer(Agent):
         system_prompt = self.templates.render("SUMMARIZER_INSTRUCTIONS.md")
         prompt = f"Please summarize the following log:\n\n{log_content}"
 
-        llm_stream = self.llm.query(prompt=prompt, system_prompt=system_prompt)
-        summary = await self._stream_and_collect_response(llm_stream)
+        summary = await self._robust_llm_query(
+            prompt=prompt, system_prompt=system_prompt
+        )
 
         return summary.strip()

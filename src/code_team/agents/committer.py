@@ -22,8 +22,9 @@ class Committer(Agent):
         )
         prompt = "Generate the commit message."
 
-        llm_stream = self.llm.query(prompt=prompt, system_prompt=system_prompt)
-        commit_message = await self._stream_and_collect_response(llm_stream)
+        commit_message = await self._robust_llm_query(
+            prompt=prompt, system_prompt=system_prompt
+        )
 
         # Clean the message: remove potential code blocks and surrounding text
         if "```" in commit_message:

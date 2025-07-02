@@ -33,7 +33,7 @@ def plan(
             print("No request provided. Exiting.")
     except KeyboardInterrupt:
         print("\nProcess interrupted by user. Exiting.")
-    except Exception as e:
+    except BaseException as e:
         print(f"\nAn unexpected error occurred: {e}")
 
 
@@ -50,7 +50,7 @@ def code() -> None:
         asyncio.run(orchestrator.run_code_phase())
     except KeyboardInterrupt:
         print("\nProcess interrupted by user. Exiting.")
-    except Exception as e:
+    except BaseException as e:
         print(f"\nAn unexpected error occurred: {e}")
 
 

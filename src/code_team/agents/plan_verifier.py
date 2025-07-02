@@ -32,7 +32,8 @@ class PlanVerifier(Agent):
         Please perform a critical review and provide your feedback in the specified format.
         """
 
-        llm_stream = self.llm.query(prompt=prompt, system_prompt=system_prompt)
-        feedback = await self._stream_and_collect_response(llm_stream)
+        feedback = await self._robust_llm_query(
+            prompt=prompt, system_prompt=system_prompt
+        )
 
         return feedback.strip()
