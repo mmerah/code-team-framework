@@ -1,5 +1,3 @@
-from claude_code_sdk import AssistantMessage, TextBlock
-
 from code_team.agents.base import Agent
 from code_team.utils import filesystem, parsing
 from code_team.utils.ui import display, interactive
@@ -55,21 +53,13 @@ class Planner(Agent):
             prompt = user_input  # Next prompt is just the user's latest message
 
     async def _get_planner_response(self, system_prompt: str, prompt: str) -> str:
-        """Gets a single response from the LLM, streaming 'thinking' status."""
-        response_text = ""
-        display.agent_thought(self.name, "is thinking...")
-        async for message in self.llm.query(prompt=prompt, system_prompt=system_prompt):
-            if isinstance(message, AssistantMessage):
-                for block in message.content:
-                    if isinstance(block, TextBlock):
-                        response_text += block.text
-        # No "finished" message here, as we're in a conversation
-        return response_text
+        """Gets a single response from the LLM with robust error handling."""
+        return await self._robust_llm_query(prompt=prompt, system_prompt=system_prompt)
 
     async def _generate_final_plan(
         self, conversation_history: list[str]
     ) -> dict[str, str]:
-        """Generates the final plan files, using the main streaming helper."""
+        """Generates the final plan files with robust error handling."""
         system_prompt = self.templates.render("PLANNER_INSTRUCTIONS.md")
         final_prompt = (
             "\n".join(conversation_history)
@@ -78,9 +68,9 @@ class Planner(Agent):
             " First, output the full content for `plan.yml`, then a separator '---_---', then the full content for `ACCEPTANCE_CRITERIA.md`."
         )
 
-        llm_stream = self.llm.query(prompt=final_prompt, system_prompt=system_prompt)
-        # Use the main helper here, as this is the final, non-interactive step
-        response_text = await self._stream_and_collect_response(llm_stream)
+        response_text = await self._robust_llm_query(
+            prompt=final_prompt, system_prompt=system_prompt
+        )
 
         parts = response_text.split("---_---")
         if len(parts) != 2:

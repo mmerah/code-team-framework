@@ -11,6 +11,7 @@ from rich.live import Live
 
 from code_team.agents.base import Agent
 from code_team.models.config import CodeTeamConfig
+from code_team.utils.exceptions import ExceptionGroup
 from code_team.utils.llm import LLMProvider
 from code_team.utils.templates import TemplateManager
 from code_team.utils.ui import display
@@ -56,29 +57,73 @@ class Coder(Agent):
 
         allowed_tools = ["Read", "Write", "Bash"]
 
-        # Using the SDK's query function to run the agentic Coder
-        llm_stream = self.llm.query(
-            prompt=prompt,
-            system_prompt=coder_prompt + "\n\n" + system_prompt,
-            allowed_tools=allowed_tools,
-        )
-
         # Create a Live display for real-time tool usage updates
         with display.create_live_display() as live:
             self._live_display = live
             self._current_tool_info = []
 
-            # Custom streaming for Coder since it needs to handle ResultMessage differently
-            async for message in llm_stream:
-                # Let the base class handle AssistantMessage and other message types
-                # by manually calling the streaming logic without the "finished" message
-                await self._handle_coder_message(message)
-
-            # Clear the live display reference
-            self._live_display = None
-            self._current_tool_info = []
+            try:
+                await self._robust_coder_query(
+                    prompt=prompt,
+                    system_prompt=coder_prompt + "\n\n" + system_prompt,
+                    allowed_tools=allowed_tools,
+                )
+            except Exception as e:
+                display.error(f"Coder encountered an error: {e}")
+                return False
+            finally:
+                # Clear the live display reference
+                self._live_display = None
+                self._current_tool_info = []
 
         return True
+
+    async def _robust_coder_query(
+        self, prompt: str, system_prompt: str, allowed_tools: list[str] | None = None
+    ) -> None:
+        """
+        Performs a robust LLM query with custom message handling for the Coder.
+        """
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                if attempt > 0:
+                    display.info(
+                        f"Retrying coder request (attempt {attempt + 1}/{max_retries})..."
+                    )
+
+                llm_stream = self.llm.query(
+                    prompt=prompt,
+                    system_prompt=system_prompt,
+                    allowed_tools=allowed_tools,
+                )
+
+                # Custom streaming for Coder since it needs to handle ResultMessage differently
+                async for message in llm_stream:
+                    await self._handle_coder_message(message)
+
+                return
+
+            except ExceptionGroup:
+                display.warning(
+                    f"Coder attempt {attempt + 1}/{max_retries} failed with TaskGroup error"
+                )
+                if attempt == max_retries - 1:
+                    display.error("All coder retry attempts failed due to SDK issues.")
+                    raise
+                import asyncio
+
+                await asyncio.sleep(1)
+            except Exception as e:
+                display.warning(
+                    f"Coder attempt {attempt + 1}/{max_retries} failed: {e}"
+                )
+                if attempt == max_retries - 1:
+                    display.error("All coder retry attempts failed.")
+                    raise
+                import asyncio
+
+                await asyncio.sleep(1)
 
     async def _handle_coder_message(self, message: Message) -> None:
         """Handle individual messages from the Coder's LLM stream."""
