@@ -18,7 +18,7 @@ Your mission is to critically review the provided implementation plan. Your goal
     *   Is the sequencing of tasks logical?
 
 ## Output Specification
-You will generate a report in `FEEDBACK.md`. If you find no issues, state that clearly. Otherwise, for each issue you identify, you MUST format your feedback as follows:
+You MUST return your feedback report as a string. Do NOT create files - your entire output should be the report content. If you find no issues, state that clearly. Otherwise, for each issue you identify, you MUST format your feedback as follows:
 
 ```markdown
 ### Concern: [A brief title for the issue]

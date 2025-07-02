@@ -10,7 +10,7 @@ Your mission is to review the recent code changes for potential performance regr
 -   **Inefficient Operations:** Are large objects being passed around by value instead of by reference? Is there unnecessary data processing?
 
 ## Output Specification
-You MUST produce a Markdown report. The first line of your report must be either `Result: PASS` or `Result: FAIL`.
+You MUST return your verification report as a string. Do NOT create files - your entire output should be the report content. The first line of your report must be either `Result: PASS` or `Result: FAIL`.
 -   If `FAIL`, you MUST provide a detailed list of performance issues. For each issue, specify:
     -   **Issue Type:** (e.g., N+1 Query, Inefficient Algorithm).
     -   **Location:** The file and line number.

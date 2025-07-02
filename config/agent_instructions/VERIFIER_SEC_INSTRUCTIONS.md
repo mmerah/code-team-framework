@@ -12,7 +12,7 @@ Your mission is to review the recent code changes for any potential security vul
 -   **Dependency Security:** (If applicable) Are any new, insecure dependencies being added?
 
 ## Output Specification
-You MUST produce a Markdown report. The first line of your report must be either `Result: PASS` or `Result: FAIL`.
+You MUST return your verification report as a string. Do NOT create files - your entire output should be the report content. The first line of your report must be either `Result: PASS` or `Result: FAIL`.
 -   If `FAIL`, you MUST provide a detailed list of vulnerabilities. For each vulnerability, specify:
     -   **Vulnerability Type:** (e.g., SQL Injection, Hardcoded Secret).
     -   **Location:** The file and line number.
