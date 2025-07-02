@@ -1,3 +1,5 @@
+"""Entry point for the Code Team Framework CLI."""
+
 import asyncio
 from pathlib import Path
 
@@ -16,8 +18,8 @@ def plan(
     ),
 ) -> None:
     """Start or resume the planning phase."""
-    # Define paths relative to the project root where main.py is located
-    project_root = Path(__file__).parent
+    # Define paths relative to the current working directory
+    project_root = Path.cwd()
     config_path = project_root / "config/codeteam_config.yml"
 
     orchestrator = Orchestrator(project_root=project_root, config_path=config_path)
@@ -40,8 +42,8 @@ def plan(
 @app.command()
 def code() -> None:
     """Start or resume the coding and verification loop."""
-    # Define paths relative to the project root where main.py is located
-    project_root = Path(__file__).parent
+    # Define paths relative to the current working directory
+    project_root = Path.cwd()
     config_path = project_root / "config/codeteam_config.yml"
 
     orchestrator = Orchestrator(project_root=project_root, config_path=config_path)

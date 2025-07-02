@@ -41,7 +41,7 @@ The framework is built to be stateless and resilient, deriving its state from th
 
 ## Usage
 
-The framework is controlled via the `main.py` script.
+The framework is controlled via the `codeteam` command.
 
 ### 1. Planning a New Feature
 
@@ -49,12 +49,12 @@ Start by creating a plan. The `Planner` agent will collaborate with you to break
 
 You can provide the initial request directly as an argument:
 ```bash
-python main.py plan "Implement a user profile feature with bio and avatar."
+codeteam plan "Implement a user profile feature with bio and avatar."
 ```
 
 Alternatively, you can run the command without an argument to be prompted for the request interactively:
 ```bash
-python main.py plan
+codeteam plan
 ```
 The agent will ask clarifying questions. When you're ready, type `/save_plan`. The plan will be saved to `docs/planning/{plan_id}/plan.yml`.
 
@@ -70,7 +70,7 @@ Review the plan and accept it to begin the coding phase.
 Once a plan is accepted, start the coding and verification loop.
 
 ```bash
-python main.py code
+codeteam code
 ```
 
 The orchestrator will pick up the next pending task, generate a prompt, and invoke the `Coder` agent. After the `Coder` finishes, verification checks run automatically. You will be prompted to review the changes.
@@ -84,10 +84,10 @@ If you stop the process, you can resume it at any time. The orchestrator will au
 
 ```bash
 # If you were in the middle of coding:
-python main.py code
+codeteam code
 
 # If you were in the middle of planning:
-python main.py plan
+codeteam plan
 ```
 
 ## Configuration
@@ -96,7 +96,7 @@ The framework is configured via `config/codeteam_config.yml`. You can set the LL
 
 ## Project Structure
 
--   `main.py`: The command-line entry point.
+-   `src/code_team/__main__.py`: The command-line entry point (available as `codeteam` command after installation).
 -   `config/`: Contains `codeteam_config.yml` and agent instruction templates.
 -   `src/code_team/`: The main application source code.
     -   `orchestrator/`: The core state machine and orchestrator logic.

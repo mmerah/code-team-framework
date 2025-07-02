@@ -30,13 +30,6 @@ repos:
         pass_filenames: false
         files: ^tests/.*\.py$
 
-      - id: mypy-main
-        name: Type check main.py with mypy
-        entry: mypy main.py --strict
-        language: system
-        pass_filenames: false
-        files: ^main\.py$
-
       # Run pytest
       - id: pytest
         name: Run pytest
