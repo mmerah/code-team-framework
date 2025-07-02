@@ -12,6 +12,7 @@ The framework is built to be stateless and resilient, deriving its state from th
 - **Human-on-the-Loop:** Key decision points, like plan approval and accepting code changes, require user intervention.
 - **Configurable Workflow:** Define verification steps, agent settings, and LLM providers in a simple `codeteam_config.yml`.
 - **Extensible:** Designed with SOLID principles, making it easy to add new agents or verification steps.
+- **Rich Terminal UI:** Agent output is displayed in styled panels for better readability. Note: Scrolling within the panels is not supported - use your terminal's scrollback feature to review previous output.
 
 ## Prerequisites
 

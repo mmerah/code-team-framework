@@ -148,6 +148,24 @@ class DisplayManager:
             transient=True,
         )
 
+    def create_agent_panel(self, agent_name: str, content: str) -> Panel:
+        """Create a styled panel for agent output.
+
+        Args:
+            agent_name: The name of the agent.
+            content: The content to display in the panel.
+
+        Returns:
+            A styled Panel object with the agent's output.
+        """
+        agent_style = f"agent.{agent_name.lower()}"
+        return Panel(
+            content,
+            title=f"[{agent_style}]{agent_name.upper()}[/{agent_style}]",
+            border_style=agent_style,
+            expand=False,
+        )
+
 
 class InteractiveManager:
     """Manager for interactive user input components."""

@@ -228,6 +228,37 @@ class TestDisplayManager:
 
         mock_console.print.assert_called_once_with()
 
+    def test_create_agent_panel(self) -> None:
+        """Test that create_agent_panel returns a properly styled Panel."""
+        manager = DisplayManager()
+
+        panel = manager.create_agent_panel("coder", "Test content")
+
+        assert isinstance(panel, Panel)
+        assert panel.renderable == "Test content"
+        assert panel.title == "[agent.coder]CODER[/agent.coder]"
+        assert panel.border_style == "agent.coder"
+        assert not panel.expand
+
+    def test_create_agent_panel_case_handling(self) -> None:
+        """Test that create_agent_panel handles different agent name cases."""
+        manager = DisplayManager()
+
+        # Test lowercase
+        panel = manager.create_agent_panel("planner", "Planning content")
+        assert panel.title == "[agent.planner]PLANNER[/agent.planner]"
+        assert panel.border_style == "agent.planner"
+
+        # Test uppercase
+        panel = manager.create_agent_panel("VERIFIER", "Verification content")
+        assert panel.title == "[agent.verifier]VERIFIER[/agent.verifier]"
+        assert panel.border_style == "agent.verifier"
+
+        # Test mixed case
+        panel = manager.create_agent_panel("Coder", "Code content")
+        assert panel.title == "[agent.coder]CODER[/agent.coder]"
+        assert panel.border_style == "agent.coder"
+
 
 class TestInteractiveManager:
     """Test the InteractiveManager class."""
@@ -249,7 +280,7 @@ class TestInteractiveManager:
         manager = InteractiveManager(custom_console)
         assert manager.console is custom_console
 
-    @patch("code_team.utils.ui.Prompt.ask")
+    @patch("rich.prompt.Prompt.ask")
     def test_get_text_input_success(self, mock_prompt: Mock) -> None:
         """Test successful text input from user."""
         mock_prompt.return_value = "user input"
@@ -262,7 +293,7 @@ class TestInteractiveManager:
             "[info]Enter your name[/info]", console=manager.console
         )
 
-    @patch("code_team.utils.ui.Prompt.ask")
+    @patch("rich.prompt.Prompt.ask")
     def test_get_text_input_with_custom_console(self, mock_prompt: Mock) -> None:
         """Test text input with custom console instance."""
         mock_prompt.return_value = "custom response"
@@ -276,7 +307,7 @@ class TestInteractiveManager:
             "[info]Custom prompt[/info]", console=custom_console
         )
 
-    @patch("code_team.utils.ui.Prompt.ask")
+    @patch("rich.prompt.Prompt.ask")
     def test_get_menu_choice_valid_selection(self, mock_prompt: Mock) -> None:
         """Test menu choice with valid numeric selection."""
         mock_prompt.return_value = "2"
@@ -302,7 +333,7 @@ class TestInteractiveManager:
             "[info]Enter your choice (number)[/info]", console=mock_console
         )
 
-    @patch("code_team.utils.ui.Prompt.ask")
+    @patch("rich.prompt.Prompt.ask")
     def test_get_menu_choice_first_option(self, mock_prompt: Mock) -> None:
         """Test menu choice selecting first option."""
         mock_prompt.return_value = "1"
@@ -314,7 +345,7 @@ class TestInteractiveManager:
 
         assert result == "First"
 
-    @patch("code_team.utils.ui.Prompt.ask")
+    @patch("rich.prompt.Prompt.ask")
     def test_get_menu_choice_last_option(self, mock_prompt: Mock) -> None:
         """Test menu choice selecting last option."""
         mock_prompt.return_value = "3"
@@ -326,7 +357,7 @@ class TestInteractiveManager:
 
         assert result == "Third"
 
-    @patch("code_team.utils.ui.Prompt.ask")
+    @patch("rich.prompt.Prompt.ask")
     def test_get_menu_choice_invalid_then_valid(self, mock_prompt: Mock) -> None:
         """Test menu choice with invalid input followed by valid input."""
         # First call returns invalid number, second call returns valid
@@ -350,7 +381,7 @@ class TestInteractiveManager:
         # Verify prompt was called twice
         assert mock_prompt.call_count == 2
 
-    @patch("code_team.utils.ui.Prompt.ask")
+    @patch("rich.prompt.Prompt.ask")
     def test_get_menu_choice_zero_input(self, mock_prompt: Mock) -> None:
         """Test menu choice with zero input (invalid)."""
         mock_prompt.side_effect = ["0", "1"]
@@ -370,7 +401,7 @@ class TestInteractiveManager:
         ]
         assert len(error_calls) == 1
 
-    @patch("code_team.utils.ui.Prompt.ask")
+    @patch("rich.prompt.Prompt.ask")
     def test_get_menu_choice_negative_input(self, mock_prompt: Mock) -> None:
         """Test menu choice with negative input (invalid)."""
         mock_prompt.side_effect = ["-1", "2"]
@@ -390,7 +421,7 @@ class TestInteractiveManager:
         ]
         assert len(error_calls) == 1
 
-    @patch("code_team.utils.ui.Prompt.ask")
+    @patch("rich.prompt.Prompt.ask")
     def test_get_menu_choice_non_numeric_input(self, mock_prompt: Mock) -> None:
         """Test menu choice with non-numeric input."""
         mock_prompt.side_effect = ["abc", "1"]
@@ -410,7 +441,7 @@ class TestInteractiveManager:
         ]
         assert len(error_calls) == 1
 
-    @patch("code_team.utils.ui.Prompt.ask")
+    @patch("rich.prompt.Prompt.ask")
     def test_get_menu_choice_empty_input(self, mock_prompt: Mock) -> None:
         """Test menu choice with empty input."""
         mock_prompt.side_effect = ["", "1"]
@@ -430,7 +461,7 @@ class TestInteractiveManager:
         ]
         assert len(error_calls) == 1
 
-    @patch("code_team.utils.ui.Prompt.ask")
+    @patch("rich.prompt.Prompt.ask")
     def test_get_menu_choice_single_option(self, mock_prompt: Mock) -> None:
         """Test menu choice with only one option available."""
         mock_prompt.return_value = "1"
@@ -449,7 +480,7 @@ class TestInteractiveManager:
         ]
         mock_console.print.assert_has_calls(expected_calls)
 
-    @patch("code_team.utils.ui.Prompt.ask")
+    @patch("rich.prompt.Prompt.ask")
     def test_get_menu_choice_multiple_invalid_inputs(self, mock_prompt: Mock) -> None:
         """Test menu choice with multiple invalid inputs before valid one."""
         mock_prompt.side_effect = ["abc", "0", "4", "2"]
@@ -585,6 +616,7 @@ class TestGlobalInstances:
         assert callable(display.agent_thought)
         assert callable(display.panel)
         assert callable(display.print)
+        assert callable(display.create_agent_panel)
 
     def test_global_interactive_methods_work(self) -> None:
         """Test that global interactive instance methods are callable."""

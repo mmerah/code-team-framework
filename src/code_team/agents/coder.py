@@ -145,9 +145,13 @@ class Coder(Agent):
                             if self._current_tool_info:
                                 display_lines.extend(self._current_tool_info)
                             display_lines.append(
-                                f"[grey50]💭 Coder thinking: {escaped_text[:100]}...[/grey50]"
+                                f"[grey50]💭 Thinking: {escaped_text[:100]}...[/grey50]"
                             )
-                            self._live_display.update("\n".join(display_lines))
+                            # Use create_agent_panel for consistency
+                            panel = display.create_agent_panel(
+                                self.name, "\n".join(display_lines)
+                            )
+                            self._live_display.update(panel)
                         else:
                             display.print(
                                 f"  [grey50]Coder: {escaped_text[:150]}...[/grey50]"
@@ -166,7 +170,11 @@ class Coder(Agent):
                     # Update live display if available
                     if hasattr(self, "_live_display") and self._live_display:
                         self._current_tool_info = tool_info
-                        self._live_display.update("\n".join(tool_info))
+                        # Use create_agent_panel for consistency
+                        panel = display.create_agent_panel(
+                            self.name, "\n".join(tool_info)
+                        )
+                        self._live_display.update(panel)
                     else:
                         for line in tool_info:
                             display.print(f"  {line}")
@@ -179,7 +187,9 @@ class Coder(Agent):
                 if self._current_tool_info:
                     display_lines.extend(self._current_tool_info)
                 display_lines.append(error_msg)
-                self._live_display.update("\n".join(display_lines))
+                # Use create_agent_panel for consistency
+                panel = display.create_agent_panel(self.name, "\n".join(display_lines))
+                self._live_display.update(panel)
                 # Clear the current tool info after showing error
                 self._current_tool_info = []
             else:
