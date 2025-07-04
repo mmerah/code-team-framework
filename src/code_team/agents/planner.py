@@ -1,3 +1,5 @@
+from typing import Any
+
 from code_team.agents.base import Agent
 from code_team.utils import filesystem, parsing
 from code_team.utils.ui import display, interactive
@@ -6,17 +8,21 @@ from code_team.utils.ui import display, interactive
 class Planner(Agent):
     """Collaborates with the user to create a detailed implementation plan."""
 
-    async def run(self, initial_request: str) -> dict[str, str]:  # type: ignore[override]
+    async def run(self, **kwargs: Any) -> dict[str, str]:
         """
         Runs an interactive planning session with the user.
 
         Args:
-            initial_request: The user's high-level feature request.
+            **kwargs: Keyword arguments containing:
+                - initial_request: The user's high-level feature request.
+                - plan_id: The ID for the plan being created (optional).
 
         Returns:
             A dictionary containing the content for `plan.yml` and
             `ACCEPTANCE_CRITERIA.md`.
         """
+        initial_request: str = kwargs["initial_request"]
+        plan_id: str | None = kwargs.get("plan_id")
         display.agent_thought(
             "Planner",
             "Hello! Let's create a plan. To start, I need to understand the project structure.",
@@ -35,7 +41,9 @@ class Planner(Agent):
         prompt = initial_request
 
         while True:
-            system_prompt = self.templates.render("PLANNER_INSTRUCTIONS.md")
+            system_prompt = self.templates.render(
+                "PLANNER_INSTRUCTIONS.md", PLAN_ID=plan_id or "unknown"
+            )
             full_prompt = (
                 "\n".join(conversation_history) + f"\n\nPlanner (to user): {prompt}"
             )
@@ -46,7 +54,7 @@ class Planner(Agent):
             user_input = interactive.get_text_input("You").strip()
 
             if user_input.lower() == "/save_plan":
-                return await self._generate_final_plan(conversation_history)
+                return await self._generate_final_plan(conversation_history, plan_id)
 
             conversation_history.append(f"Planner: {response_text}")
             conversation_history.append(f"User: {user_input}")
@@ -57,10 +65,12 @@ class Planner(Agent):
         return await self._robust_llm_query(prompt=prompt, system_prompt=system_prompt)
 
     async def _generate_final_plan(
-        self, conversation_history: list[str]
+        self, conversation_history: list[str], plan_id: str | None = None
     ) -> dict[str, str]:
         """Generates the final plan files with robust error handling."""
-        system_prompt = self.templates.render("PLANNER_INSTRUCTIONS.md")
+        system_prompt = self.templates.render(
+            "PLANNER_INSTRUCTIONS.md", PLAN_ID=plan_id or "unknown"
+        )
         final_prompt = (
             "\n".join(conversation_history)
             + "\n\nUser: /save_plan"

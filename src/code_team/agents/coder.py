@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Any
 
 from claude_code_sdk import (
     AssistantMessage,
@@ -32,23 +33,27 @@ class Coder(Agent):
         self._live_display: Live | None = None
         self._current_tool_info: list[str] = []
 
-    async def run(  # type: ignore[override]
-        self, coder_prompt: str, verification_feedback: str | None = None
-    ) -> bool:
+    async def run(self, **kwargs: Any) -> bool:
         """
         Runs the Coder agent to perform code modifications.
 
         Args:
-            coder_prompt: The detailed instructions from the Prompter.
-            verification_feedback: Optional feedback from a previous failed run.
+            **kwargs: Keyword arguments containing:
+                - coder_prompt: The detailed instructions from the Prompter.
+                - verification_feedback: Optional feedback from a previous failed run.
+                - plan_id: The ID of the current plan being executed (optional).
 
         Returns:
             True if the process completed, False otherwise.
         """
+        coder_prompt: str = kwargs["coder_prompt"]
+        verification_feedback: str | None = kwargs.get("verification_feedback")
+        plan_id: str | None = kwargs.get("plan_id")
         system_prompt = self.templates.render(
             "CODER_INSTRUCTIONS.md",
             VERIFICATION_FEEDBACK=verification_feedback
             or "No feedback from previous run.",
+            PLAN_ID=plan_id or "unknown",
         )
 
         prompt = (
@@ -141,7 +146,7 @@ class Coder(Agent):
                         # Update live display if available
                         if hasattr(self, "_live_display") and self._live_display:
                             # Build current display content
-                            display_lines = []
+                            display_lines: list[str] = []
                             if self._current_tool_info:
                                 display_lines.extend(self._current_tool_info)
                             display_lines.append(
@@ -183,12 +188,14 @@ class Coder(Agent):
 
             # Update live display if available
             if hasattr(self, "_live_display") and self._live_display:
-                display_lines = []
+                error_display_lines: list[str] = []
                 if self._current_tool_info:
-                    display_lines.extend(self._current_tool_info)
-                display_lines.append(error_msg)
+                    error_display_lines.extend(self._current_tool_info)
+                error_display_lines.append(error_msg)
                 # Use create_agent_panel for consistency
-                panel = display.create_agent_panel(self.name, "\n".join(display_lines))
+                panel = display.create_agent_panel(
+                    self.name, "\n".join(error_display_lines)
+                )
                 self._live_display.update(panel)
                 # Clear the current tool info after showing error
                 self._current_tool_info = []
