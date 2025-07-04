@@ -168,7 +168,7 @@ class DisplayManager:
         agent_style = f"agent.{sanitized_name}"
 
         # Check if style exists in theme, fallback to default if not
-        if agent_style not in self.console._theme_stack._entries[-1]:
+        if agent_style not in APP_THEME.styles:
             agent_style = "agent.verifier"
 
         return Panel(

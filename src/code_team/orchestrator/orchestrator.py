@@ -59,15 +59,15 @@ class Orchestrator:
     async def run_plan_phase(self, initial_request: str) -> None:
         """Runs the planning phase of the workflow."""
         self.state = OrchestratorState.PLANNING_DRAFTING
+        plan_id = f"plan-{len(list(self.plan_dir.iterdir())) + 1:04d}"
         planner = self._create_agent(Planner)
-        plan_files = await planner.run(initial_request=initial_request)
+        plan_files = await planner.run(initial_request=initial_request, plan_id=plan_id)
 
         if not plan_files:
             self.state = OrchestratorState.HALTED_FOR_ERROR
             display.error("Failed to generate plan files.")
             return
 
-        plan_id = f"plan-{len(list(self.plan_dir.iterdir())) + 1:04d}"
         current_plan_dir = self.plan_dir / plan_id
         current_plan_dir.mkdir()
 
@@ -110,7 +110,7 @@ class Orchestrator:
         # Re-run planner with revision request
         planner = self._create_agent(Planner)
         plan_files = await planner.run(
-            initial_request=revision_request, existing_plan_dir=plan_dir
+            initial_request=revision_request, plan_id=plan_dir.name
         )
 
         if not plan_files:
@@ -265,6 +265,7 @@ class Orchestrator:
             await coder.run(
                 coder_prompt=coder_prompt,
                 verification_feedback=verification_feedback,
+                plan_id=plan.plan_id,
             )
             progress.update(current_task_id, completed=2)
 
@@ -384,6 +385,11 @@ class Orchestrator:
                 report_file.unlink()
         else:
             display.error(f"Failed to commit changes for task '{task.id}'.")
+            display.warning(
+                "Please fix the git commit issues manually and then retry the committer."
+            )
+            self.state = OrchestratorState.HALTED_FOR_ERROR
+            raise Exception("Git commit failed. Manual intervention required.")
 
     def _select_next_task(self, plan: Plan) -> str:
         """Deterministically finds the next pending task whose dependencies are met."""
