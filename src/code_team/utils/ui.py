@@ -26,6 +26,9 @@ APP_THEME = Theme(
         "agent.verifier": "magenta",
         "agent.committer": "cyan",
         "agent.summarizer": "yellow",
+        "agent.planverifier": "bright_magenta",
+        "agent.prompter": "bright_cyan",
+        "agent.codeverifier": "bright_red",
         "highlight": "bold",
         "title": "bold blue",
         "subtitle": "dim",
@@ -158,7 +161,16 @@ class DisplayManager:
         Returns:
             A styled Panel object with the agent's output.
         """
-        agent_style = f"agent.{agent_name.lower()}"
+        # Sanitize agent name for theme key generation
+        sanitized_name = (
+            agent_name.lower().replace(" ", "").replace("(", "").replace(")", "")
+        )
+        agent_style = f"agent.{sanitized_name}"
+
+        # Check if style exists in theme, fallback to default if not
+        if agent_style not in self.console._theme_stack._entries[-1]:
+            agent_style = "agent.verifier"
+
         return Panel(
             content,
             title=f"[{agent_style}]{agent_name.upper()}[/{agent_style}]",
