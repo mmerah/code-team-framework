@@ -18,7 +18,6 @@ def plan(
     ),
 ) -> None:
     """Start or resume the planning phase."""
-    # Define paths relative to the current working directory
     project_root = Path.cwd()
     config_path = project_root / "config/codeteam_config.yml"
 
@@ -42,7 +41,6 @@ def plan(
 @app.command()
 def code() -> None:
     """Start or resume the coding and verification loop."""
-    # Define paths relative to the current working directory
     project_root = Path.cwd()
     config_path = project_root / "config/codeteam_config.yml"
 

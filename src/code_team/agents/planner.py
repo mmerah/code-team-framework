@@ -65,14 +65,14 @@ class Planner(Agent):
             "\n".join(conversation_history)
             + "\n\nUser: /save_plan"
             + "\n\nOkay, I have all the information. Now, generate the `plan.yml` and `ACCEPTANCE_CRITERIA.md` content as separate files."
-            " First, output the full content for `plan.yml`, then a separator '---_---', then the full content for `ACCEPTANCE_CRITERIA.md`."
+            " First, output the full content for `plan.yml`, then a separator '===FILE_SEPARATOR===', then the full content for `ACCEPTANCE_CRITERIA.md`."
         )
 
         response_text = await self._robust_llm_query(
             prompt=final_prompt, system_prompt=system_prompt
         )
 
-        parts = response_text.split("---_---")
+        parts = response_text.split("===FILE_SEPARATOR===")
         if len(parts) != 2:
             display.agent_thought(
                 "Planner",
