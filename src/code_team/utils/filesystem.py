@@ -28,6 +28,7 @@ def get_repo_map(root: Path, exclude_dirs: list[str] | None = None) -> str:
             "__pycache__",
             ".codeteam",
             "node_modules",
+            "build",
         ]
 
     lines: list[str] = []

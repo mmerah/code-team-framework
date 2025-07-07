@@ -280,3 +280,73 @@ class TestTemplateManager:
 
             # Should not have repo map content
             assert "No repo map" in result
+
+    def test_repo_map_with_custom_exclude_dirs(self) -> None:
+        """Test that custom exclude_dirs are properly used in repo map generation."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            template_dir = Path(tmpdir)
+            project_root = Path(tmpdir) / "project"
+            project_root.mkdir()
+
+            # Create a project structure with files to exclude
+            (project_root / "keep_file.txt").write_text("content")
+            (project_root / "exclude_dir").mkdir()
+            (project_root / "exclude_dir" / "hidden.txt").write_text("content")
+            (project_root / "another_exclude").mkdir()
+            (project_root / "another_exclude" / "also_hidden.txt").write_text("content")
+
+            template_file = template_dir / "test.txt"
+            template_file.write_text("{{ REPO_MAP }}")
+
+            # Create required guideline files
+            (template_dir / "ARCHITECTURE_GUIDELINES.md").write_text("Architecture")
+            (template_dir / "CODING_GUIDELINES.md").write_text("Coding")
+            (template_dir / "AGENT_OBJECTIVITY.md").write_text("Objectivity")
+
+            # Test with custom exclude_dirs
+            manager = TemplateManager(
+                template_dir,
+                project_root=project_root,
+                exclude_dirs=["exclude_dir", "another_exclude"],
+            )
+            result = manager.render("test.txt")
+
+            # Should contain the kept file but not the excluded directories
+            assert "keep_file.txt" in result
+            assert "exclude_dir" not in result
+            assert "another_exclude" not in result
+            assert "hidden.txt" not in result
+            assert "also_hidden.txt" not in result
+
+    def test_repo_map_with_default_exclude_dirs(self) -> None:
+        """Test that default exclude_dirs are used when none are specified."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            template_dir = Path(tmpdir)
+            project_root = Path(tmpdir) / "project"
+            project_root.mkdir()
+
+            # Create a project structure with default excluded directories
+            (project_root / "keep_file.txt").write_text("content")
+            (project_root / ".git").mkdir()
+            (project_root / ".git" / "config").write_text("content")
+            (project_root / "__pycache__").mkdir()
+            (project_root / "__pycache__" / "cache.pyc").write_text("content")
+
+            template_file = template_dir / "test.txt"
+            template_file.write_text("{{ REPO_MAP }}")
+
+            # Create required guideline files
+            (template_dir / "ARCHITECTURE_GUIDELINES.md").write_text("Architecture")
+            (template_dir / "CODING_GUIDELINES.md").write_text("Coding")
+            (template_dir / "AGENT_OBJECTIVITY.md").write_text("Objectivity")
+
+            # Test with no exclude_dirs specified (should use defaults)
+            manager = TemplateManager(template_dir, project_root=project_root)
+            result = manager.render("test.txt")
+
+            # Should contain the kept file but not the default excluded directories
+            assert "keep_file.txt" in result
+            assert ".git" not in result
+            assert "__pycache__" not in result
+            assert "config" not in result
+            assert "cache.pyc" not in result

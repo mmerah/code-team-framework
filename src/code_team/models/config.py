@@ -85,6 +85,19 @@ class TemplateConfig(BaseModel):
             "AGENT_OBJECTIVITY.md",
         ]
     )
+    exclude_dirs: list[str] = Field(
+        default_factory=lambda: [
+            ".git",
+            ".mypy_cache",
+            ".ruff_cache",
+            ".venv",
+            ".idea",
+            "__pycache__",
+            ".codeteam",
+            "node_modules",
+            "build",
+        ]
+    )
 
 
 class CodeTeamConfig(BaseModel):
