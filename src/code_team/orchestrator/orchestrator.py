@@ -36,6 +36,7 @@ class Orchestrator:
             project_root / self.config.paths.template_dir,
             project_root=project_root,
             guideline_files=self.config.templates.guideline_files,
+            exclude_dirs=self.config.templates.exclude_dirs,
         )
 
         self._ensure_dirs_exist()

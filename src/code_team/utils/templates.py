@@ -107,6 +107,7 @@ class TemplateManager:
         template_dir: Path,
         project_root: Path | None = None,
         guideline_files: list[str] | None = None,
+        exclude_dirs: list[str] | None = None,
     ):
         self._loader = HybridTemplateLoader(template_dir, "code_team", "templates")
         self._env = Environment(loader=self._loader)
@@ -116,6 +117,7 @@ class TemplateManager:
             "CODING_GUIDELINES.md",
             "AGENT_OBJECTIVITY.md",
         ]
+        self._exclude_dirs = exclude_dirs
 
     def render(self, template_name: str, **kwargs: Any) -> str:
         """Render a template with the given context."""
@@ -129,7 +131,9 @@ class TemplateManager:
 
         # Generate repo map content dynamically if project_root is available
         if self._project_root:
-            common_context["REPO_MAP"] = get_repo_map(self._project_root)
+            common_context["REPO_MAP"] = get_repo_map(
+                self._project_root, self._exclude_dirs
+            )
 
         return template.render({**common_context, **kwargs})
 

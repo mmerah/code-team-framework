@@ -141,10 +141,20 @@ templates:
     - ARCHITECTURE_GUIDELINES.md
     - CODING_GUIDELINES.md
     - AGENT_OBJECTIVITY.md
+  exclude_dirs:
+    - .git
+    - .mypy_cache
+    - .ruff_cache
+    - .venv
+    - .idea
+    - __pycache__
+    - .codeteam
+    - node_modules
 ```
 
 Configures template rendering:
 - **guideline_files**: List of guideline files to load and make available to all agents
+- **exclude_dirs**: List of directories to exclude from the repository map generation. This helps reduce the size of the repository map passed to AI agents, which can prevent "Argument list too long" errors on large projects
 
 ## Customization Examples
 

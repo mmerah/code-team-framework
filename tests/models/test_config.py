@@ -9,6 +9,7 @@ from code_team.models.config import (
     CodeTeamConfig,
     LLMConfig,
     PathConfig,
+    TemplateConfig,
     VerificationCommand,
     VerificationConfig,
     VerificationMetrics,
@@ -206,6 +207,7 @@ class TestCodeTeamConfig:
         assert isinstance(config.verification, VerificationConfig)
         assert isinstance(config.verifier_instances, VerifierInstances)
         assert isinstance(config.paths, PathConfig)
+        assert isinstance(config.templates, TemplateConfig)
 
     def test_custom_config(self) -> None:
         """Test that CodeTeamConfig accepts custom values."""
@@ -233,3 +235,53 @@ class TestCodeTeamConfig:
         assert len(config.verification.commands) == 1
         assert config.verifier_instances.security == 1
         assert config.paths.plan_dir == "custom/plans"
+
+
+class TestTemplateConfig:
+    """Test the TemplateConfig model."""
+
+    def test_default_template_config(self) -> None:
+        """Test that TemplateConfig has correct defaults."""
+        config = TemplateConfig()
+        assert config.guideline_files == [
+            "ARCHITECTURE_GUIDELINES.md",
+            "CODING_GUIDELINES.md",
+            "AGENT_OBJECTIVITY.md",
+        ]
+        assert config.exclude_dirs == [
+            ".git",
+            ".mypy_cache",
+            ".ruff_cache",
+            ".venv",
+            ".idea",
+            "__pycache__",
+            ".codeteam",
+            "node_modules",
+            "build",
+        ]
+
+    def test_custom_template_config(self) -> None:
+        """Test that TemplateConfig accepts custom values."""
+        config = TemplateConfig(
+            guideline_files=["CUSTOM_GUIDELINES.md"],
+            exclude_dirs=["custom_exclude", "another_exclude"],
+        )
+        assert config.guideline_files == ["CUSTOM_GUIDELINES.md"]
+        assert config.exclude_dirs == ["custom_exclude", "another_exclude"]
+
+    def test_empty_exclude_dirs(self) -> None:
+        """Test that TemplateConfig accepts empty exclude_dirs list."""
+        config = TemplateConfig(exclude_dirs=[])
+        assert config.exclude_dirs == []
+
+    def test_partial_custom_config(self) -> None:
+        """Test that TemplateConfig allows partial customization."""
+        config = TemplateConfig(exclude_dirs=["only_this"])
+        # guideline_files should still be default
+        assert config.guideline_files == [
+            "ARCHITECTURE_GUIDELINES.md",
+            "CODING_GUIDELINES.md",
+            "AGENT_OBJECTIVITY.md",
+        ]
+        # exclude_dirs should be custom
+        assert config.exclude_dirs == ["only_this"]
