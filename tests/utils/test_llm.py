@@ -15,7 +15,7 @@ class TestLLMProvider:
 
     def test_initialization(self) -> None:
         """Test LLMProvider initialization."""
-        config = LLMConfig(model="opus")
+        config = LLMConfig(planner="opus")
         cwd = "/test/path"
 
         provider = LLMProvider(config, cwd)
@@ -25,12 +25,14 @@ class TestLLMProvider:
 
     def test_initialization_with_default_config(self) -> None:
         """Test LLMProvider initialization with default config."""
-        config = LLMConfig()  # Uses default model
+        config = LLMConfig()
         cwd = "/test/path"
 
         provider = LLMProvider(config, cwd)
 
-        assert provider._config.model == "sonnet"  # Default model
+        # Default model
+        assert provider._config.planner == "sonnet"
+        assert provider._config.coder == "sonnet"
         assert provider._cwd == cwd
 
     @pytest.mark.asyncio
@@ -46,7 +48,7 @@ class TestLLMProvider:
 
         mock_query.return_value = mock_messages()
 
-        config = LLMConfig(model="opus")
+        config = LLMConfig(planner="opus")
         provider = LLMProvider(config, "/test/path")
 
         messages = []
@@ -107,7 +109,7 @@ class TestLLMProvider:
 
         mock_query.return_value = mock_messages()
 
-        config = LLMConfig(model="haiku")
+        config = LLMConfig(coder="haiku")
         provider = LLMProvider(config, "/another/path")
 
         messages = []
@@ -119,7 +121,7 @@ class TestLLMProvider:
         mock_query.assert_called_once()
         call_args = mock_query.call_args
         assert call_args[1]["options"].allowed_tools == []
-        assert call_args[1]["options"].model == "haiku"
+        assert call_args[1]["options"].model == "sonnet"
         assert call_args[1]["options"].cwd == "/another/path"
 
     @pytest.mark.asyncio
@@ -155,7 +157,7 @@ class TestLLMProvider:
 
         mock_query.return_value = mock_messages()
 
-        config = LLMConfig(model="opus")
+        config = LLMConfig(planner="opus")
         cwd = "/custom/working/directory"
         provider = LLMProvider(config, cwd)
 

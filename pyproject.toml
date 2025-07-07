@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "code-team-framework"
-version = "1.0.0"
+version = "0.1.0"
 description = "A framework for AI-powered software development using a team of specialized agents."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -32,6 +32,10 @@ dependencies = [
     "typing_extensions>=4.0.0",
 ]
 
+[project.urls]
+Homepage = "https://github.com/mmerah/code-team-framework"
+Issues = "https://github.com/mmerah/code-team-framework/issues"
+
 [project.scripts]
 codeteam = "code_team.__main__:main"
 
@@ -48,6 +52,9 @@ dev = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/code_team"]
+
+[tool.hatch.build.targets.wheel.sources]
+"src/code_team/templates" = "code_team/templates"
 
 [tool.ruff]
 target-version = "py310"

@@ -18,13 +18,12 @@ def temp_project_root() -> Generator[tuple[Path, Path], None, None]:
         project_root = Path(tmp_dir)
 
         # Create necessary directories
-        (project_root / "docs" / "planning").mkdir(parents=True)
-        (project_root / ".codeteam" / "logs").mkdir(parents=True)
+        (project_root / ".codeteam" / "planning").mkdir(parents=True)
         (project_root / ".codeteam" / "reports").mkdir(parents=True)
-        (project_root / "config" / "agent_instructions").mkdir(parents=True)
+        (project_root / ".codeteam" / "agent_instructions").mkdir(parents=True)
 
         # Create a basic config file
-        config_path = project_root / "config.yml"
+        config_path = project_root / ".codeteam" / "config.yml"
         config_path.write_text("""
 llm:
   provider: "test"
@@ -63,7 +62,7 @@ class TestPlanSelection:
         with patch("code_team.utils.ui.display.error") as mock_error:
             result = orchestrator._select_plan_interactively()
             assert result is None
-            mock_error.assert_called_once_with("No plans found in docs/planning.")
+            mock_error.assert_called_once_with("No plans found in .codeteam/planning.")
 
     def test_select_plan_interactively_with_plans(
         self, orchestrator: Orchestrator, temp_project_root: tuple[Path, Path]
@@ -72,8 +71,8 @@ class TestPlanSelection:
         project_root, _ = temp_project_root
 
         # Create a test plan
-        plan_dir = project_root / "docs" / "planning" / "plan-0001"
-        plan_dir.mkdir()
+        plan_dir = project_root / ".codeteam" / "planning" / "plan-0001"
+        plan_dir.mkdir(parents=True)
 
         plan_content = """
 plan_id: "test-plan"
@@ -112,14 +111,16 @@ tasks:
         project_root, _ = temp_project_root
 
         # Create an invalid plan
-        plan_dir = project_root / "docs" / "planning" / "plan-0001"
-        plan_dir.mkdir()
+        plan_dir = project_root / ".codeteam" / "planning" / "plan-0001"
+        plan_dir.mkdir(parents=True)
         (plan_dir / "plan.yml").write_text("invalid yaml content: [")
 
         with patch("code_team.utils.ui.display.error") as mock_error:
             result = orchestrator._select_plan_interactively()
             assert result is None
-            mock_error.assert_called_once_with("No valid plans found in docs/planning.")
+            mock_error.assert_called_once_with(
+                "No valid plans found in .codeteam/planning."
+            )
 
 
 class TestReportManagement:
@@ -237,8 +238,8 @@ class TestProgressTracking:
         project_root, _ = temp_project_root
 
         # Create a test plan
-        plan_dir = project_root / "docs" / "planning" / "plan-0001"
-        plan_dir.mkdir()
+        plan_dir = project_root / ".codeteam" / "planning" / "plan-0001"
+        plan_dir.mkdir(parents=True)
 
         plan_content = """
 plan_id: "test-plan"

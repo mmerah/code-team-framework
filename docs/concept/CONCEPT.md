@@ -26,7 +26,7 @@ This is the master Python application that drives the entire system. It is imple
 
 *   **State Persistence & Recovery:** The system is stateless by design. The Orchestrator determines the current state upon startup by inspecting the environment:
     1.  **Git Status:** It checks `git status --porcelain` and `git log` to understand the commit history and working directory state.
-    2.  **Plan Files:** It scans the `docs/planning/{plan-id}/plan.yml` file, checking the `status` of each task (`pending`, `completed`, `failed`).
+    2.  **Plan Files:** It scans the `.codeteam/planning/{plan-id}/plan.yml` file, checking the `status` of each task (`pending`, `completed`, `failed`).
     3.  **Log Files:** It checks for the existence of `CODER_LOG.md` and verification reports.
     This allows the process to be stopped and resumed reliably.
 
@@ -57,8 +57,8 @@ The framework will utilize a suite of specialized agents, all invoked via the Cl
     *   **Output:** A summarized `CODER_LOG.md` (overwriting the old one).
 
 *   **Planner Output:**
-    *   `docs/planning/{PLAN_ID}/plan.yml` (Structured YAML)
-    *   `docs/planning/{PLAN_ID}/ACCEPTANCE_CRITERIA.md` (Human-readable goals)
+    *   `.codeteam/planning/{PLAN_ID}/plan.yml` (Structured YAML)
+    *   `.codeteam/planning/{PLAN_ID}/ACCEPTANCE_CRITERIA.md` (Human-readable goals)
 
     **`plan.yml` Format:**
     ```yaml
@@ -137,7 +137,7 @@ The framework will utilize a suite of specialized agents, all invoked via the Cl
 
 **Mode: Plan**
 1.  User runs `python orchestrator.py plan "Implement user profile feature"`.
-2.  Orchestrator enters `PLANNING_DRAFTING` state, creating `docs/planning/feature-0021`.
+2.  Orchestrator enters `PLANNING_DRAFTING` state, creating `.codeteam/planning/feature-0021`.
 3.  It starts a loop with the `Planner` agent, which asks clarifying questions.
 4.  When the user is satisfied, they type `/save_plan`. The `Planner` writes `plan.yml` and `ACCEPTANCE_CRITERIA.md`.
 5.  Orchestrator transitions to `PLANNING_AWAITING_REVIEW`. It prompts the user: `Plan feature-0021 created. Do you want to /accept_plan or /request_feedback_round?`
@@ -150,7 +150,7 @@ The framework will utilize a suite of specialized agents, all invoked via the Cl
 3.  **Prompter:** Transitions to `CODING_PROMPTING`. The `Prompter` agent is called for `task-002`. It generates a detailed prompt.
 4.  **Coder:** Transitions to `CODING_IN_PROGRESS`. The Orchestrator calls the `Coder` agent via the Claude Code SDK with the generated prompt and necessary tools enabled. The `CODER_LOG.md` is updated.
 5.  **Verification:** Once the Coder subprocess finishes, Orchestrator transitions to `VERIFYING`.
-    *   It runs all commands from `codeteam_config.yml`.
+    *   It runs all commands from `.codeteam/config.yml`.
     *   It runs all metric checks.
     *   It invokes all `CodeVerifier` agents in parallel.
     *   It aggregates all outputs into the structured markdown report format shown above.
@@ -159,7 +159,7 @@ The framework will utilize a suite of specialized agents, all invoked via the Cl
     *   **If user types `/reject_changes Refactor this to use the repository pattern`:** It adds the user's feedback to the verification report. It then transitions back to `CODING_IN_PROGRESS` (step 4), providing the Coder with the original prompt plus the aggregated feedback report.
 7.  **Completion:** If the `Situation` agent in step 2 finds no more pending tasks, the Orchestrator transitions to `PLAN_COMPLETE`, informs the user, and suggests pushing the branch.
 
-#### V. Configuration (`codeteam_config.yml`)
+#### V. Configuration (`.codeteam/config.yml`)
 
 A YAML file at the root of the repository controls the framework's behavior.
 

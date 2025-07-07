@@ -34,5 +34,5 @@ This is the core of your prompt. Provide a numbered list of precise actions for 
 5.  **Update `CODER_LOG.md`**: Ensure all steps are logged.
 
 ## 4. Final Checks
-Remind the Coder to adhere to all guidelines (`ARCHITECTURE_GUIDELINES.md`, `CODING_GUIDELINES.md`) and to ensure all automated checks (linters, tests) pass before finishing.
+Remind the Coder to adhere to all guidelines provided in their system prompt and to ensure all automated checks (linters, tests) pass before finishing.
 ```

@@ -69,7 +69,7 @@ async def mock_llm_stream_partial_response() -> AsyncIterator[Any]:
 def mock_config() -> CodeTeamConfig:
     """Create a mock configuration."""
     return CodeTeamConfig(
-        llm=LLMConfig(model="test-model"),
+        llm=LLMConfig(),
         verification=VerificationConfig(),
         verifier_instances=VerifierInstances(),
     )

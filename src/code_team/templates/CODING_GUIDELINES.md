@@ -3,8 +3,6 @@
 ## Introduction
 These guidelines define the specific rules and standards for writing code in this project. Adherence to these rules ensures consistency, readability, and quality across the entire codebase. All submitted code must comply with these standards.
 
----
-
 ## 1. Testing
 
 -   **Test-First Approach**: All new functionality must be accompanied by tests. For bug fixes, a regression test must be written first to prove the existence of the bug, and it must pass after the fix is applied.
@@ -12,8 +10,6 @@ These guidelines define the specific rules and standards for writing code in thi
 -   **Location**: Tests must be placed in the `tests/` directory, mirroring the structure of the `src/` directory. For example, tests for `src/code_team/utils/filesystem.py` should be in `tests/utils/test_filesystem.py`.
 -   **Coverage**: Strive for high test coverage. Every logical path in your code should be exercised by at least one test case.
 -   **Assertions**: Use descriptive assertion messages where necessary to make test failures easier to debug.
-
----
 
 ## 2. Linting and Formatting
 
@@ -23,15 +19,11 @@ These guidelines define the specific rules and standards for writing code in thi
     2.  `ruff check .`
 -   **Automation**: These checks are run automatically during the `VERIFYING` state. Failure to pass will result in the task being rejected.
 
----
-
 ## 3. Error Handling
 
 -   **Specific Exceptions**: Avoid using the generic `Exception`. Define and use custom, specific exception classes where appropriate (e.g., `UserNotFoundError` instead of `ValueError`).
 -   **Catch Specific Errors**: Do not use broad `except Exception:` or bare `except:` clauses. Catch only the specific exceptions you expect and know how to handle.
 -   **No Silent Failures**: Do not swallow exceptions. If you catch an exception, either handle it completely, re-raise it, or wrap it in a custom exception. Always log errors with sufficient context.
-
----
 
 ## 4. Comments and Docstrings
 
@@ -51,8 +43,6 @@ These guidelines define the specific rules and standards for writing code in thi
         """
     ```
 -   **Inline Comments**: Use inline comments (`#`) sparingly. They should explain the *why*, not the *what*. The code itself should be clear enough to explain what it is doing. Use comments for complex business logic, workarounds, or algorithm explanations.
-
----
 
 ## 5. Security
 

@@ -101,6 +101,7 @@ class Coder(Agent):
                     prompt=prompt,
                     system_prompt=system_prompt,
                     allowed_tools=allowed_tools,
+                    model=self._get_model(),
                 )
 
                 # Custom streaming for Coder since it needs to handle ResultMessage differently
