@@ -10,7 +10,7 @@ The framework is built to be stateless and resilient, deriving its state from th
 - **Specialized AI Agents:** A roster of agents (Planner, Coder, Verifiers, etc.) each with a specific role, powered by the Claude Code SDK.
 - **File-Based State:** The system is stateless. Stop it at any time and it will recover its state from the repository's condition.
 - **Human-on-the-Loop:** Key decision points, like plan approval and accepting code changes, require user intervention.
-- **Configurable Workflow:** Define verification steps, agent settings, and LLM providers in a simple `codeteam_config.yml`.
+- **Configurable Workflow:** Define verification steps, agent settings, and LLM providers in a simple `.codeteam/config.yml`.
 - **Extensible:** Designed with SOLID principles, making it easy to add new agents or verification steps.
 - **Rich Terminal UI:** Agent output is displayed in styled panels for better readability. Note: Scrolling within the panels is not supported - use your terminal's scrollback feature to review previous output.
 
@@ -22,6 +22,14 @@ The framework is built to be stateless and resilient, deriving its state from th
 - An Anthropic API key set as an environment variable: `export ANTHROPIC_API_KEY="your-key-here"`
 
 ## Installation
+
+### Install from PyPI (Recommended)
+
+```bash
+pip install code-team-framework
+```
+
+### Install from Source
 
 1.  **Clone the repository:**
     ```bash
@@ -57,7 +65,7 @@ Alternatively, you can run the command without an argument to be prompted for th
 ```bash
 codeteam plan
 ```
-The agent will ask clarifying questions. When you're ready, type `/save_plan`. The plan will be saved to `docs/planning/{plan_id}/plan.yml`.
+The agent will ask clarifying questions. When you're ready, type `/save_plan`. The plan will be saved to `.codeteam/planning/{plan_id}/plan.yml`.
 
 Review the plan and accept it to begin the coding phase.
 
@@ -91,18 +99,60 @@ codeteam code
 codeteam plan
 ```
 
+## Integration
+
+The Code Team Framework can be easily integrated into any project:
+
+### 1. Initialize the Framework
+
+```bash
+# Navigate to your project
+cd /path/to/your/project
+
+# Initialize the framework (creates .codeteam/ directory)
+codeteam init
+```
+
+This creates a `.codeteam/` directory with:
+- `config.yml` - Main configuration file
+- `agent_instructions/` - Customizable agent instruction templates
+- `planning/` - Planning documents (generated during use)
+- `reports/` - Verification reports (temporary)
+
+### 2. Start Using the Framework
+
+```bash
+# Start planning and coding
+codeteam plan "Implement new feature"
+codeteam code
+```
+
+### 3. Customization
+
+After initialization, you can customize:
+- **Configuration**: Edit `.codeteam/config.yml` to adjust paths, verification commands, and agent settings
+- **Agent Instructions**: Modify templates in `.codeteam/agent_instructions/` to customize how agents behave
+
 ## Configuration
 
-The framework is configured via `config/codeteam_config.yml`. You can set the LLM model, define custom verification commands, and configure agent behavior.
+The framework is configured via `.codeteam/config.yml`. You can set the LLM model, define custom verification commands, and configure agent behavior. Run `codeteam init` to create the default configuration file.
+
+For comprehensive configuration options and examples, see the [Configuration Guide](docs/CONFIGURATION.md).
 
 ## Project Structure
 
+**Framework Source Code:**
 -   `src/code_team/__main__.py`: The command-line entry point (available as `codeteam` command after installation).
--   `config/`: Contains `codeteam_config.yml` and agent instruction templates.
 -   `src/code_team/`: The main application source code.
     -   `orchestrator/`: The core state machine and orchestrator logic.
     -   `agents/`: Implementations for all specialized AI agents.
     -   `models/`: Pydantic models for configuration and plan files.
     -   `utils/`: Helper modules for filesystem, Git, LLM interaction, and templating.
--   `.codeteam/`: Stores runtime artifacts like logs and reports.
--   `docs/planning/`: Stores generated plans and related documents.
+    -   `templates/`: Default agent instruction templates (packaged with the framework).
+
+**When Used in Projects:**
+-   `.codeteam/`: Framework directory (created by `codeteam init`).
+    -   `config.yml`: Main configuration file.
+    -   `agent_instructions/`: Customizable agent instruction templates.
+    -   `planning/`: Generated plans and related documents.
+    -   `reports/`: Verification reports (temporary files).

@@ -19,8 +19,8 @@ These markdown files are included in the system prompt for *almost every agent* 
 *   **Triggered By:** The Orchestrator in the `PLANNING_DRAFTING` state, initiated by the user.
 *   **Primary Inputs:** The initial user request (e.g., "Implement user profile feature").
 *   **Primary Outputs:**
-    1.  `docs/planning/{{PLAN_ID}}/plan.yml` (A machine-readable list of tasks).
-    2.  `docs/planning/{{PLAN_ID}}/ACCEPTANCE_CRITERIA.md` (A human-readable success definition).
+    1.  `.codeteam/planning/{{PLAN_ID}}/plan.yml` (A machine-readable list of tasks).
+    2.  `.codeteam/planning/{{PLAN_ID}}/ACCEPTANCE_CRITERIA.md` (A human-readable success definition).
 *   **Instruction File Name:** `PLANNER_INSTRUCTIONS.md`
 
 #### `PLANNER_INSTRUCTIONS.md` Content:
@@ -81,7 +81,7 @@ Example:
 *   **Core Purpose:** To act as a "second opinion" on a generated plan, critically assessing its feasibility, risks, and adherence to architectural principles before any code is written.
 *   **Triggered By:** The Orchestrator in the `PLANNING_VERIFYING` state.
 *   **Primary Inputs:** The generated `plan.yml` and the `{{REPO_MAP}}`.
-*   **Primary Outputs:** A markdown report written to `docs/planning/{{PLAN_ID}}/FEEDBACK.md`.
+*   **Primary Outputs:** A markdown report written to `.codeteam/planning/{{PLAN_ID}}/FEEDBACK.md`.
 *   **Instruction File Name:** `PLAN_VERIFIER_INSTRUCTIONS.md`
 
 #### `PLAN_VERIFIER_INSTRUCTIONS.md` Content:

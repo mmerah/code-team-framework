@@ -17,6 +17,7 @@ class LLMProvider:
         prompt: str,
         system_prompt: str,
         allowed_tools: list[str] | None = None,
+        model: str | None = None,
     ) -> AsyncIterator[Message]:
         """
         Perform a query using the Claude Code SDK.
@@ -25,12 +26,14 @@ class LLMProvider:
             prompt: The user-level prompt for the current turn.
             system_prompt: The detailed system prompt guiding the agent.
             allowed_tools: A list of tools the agent can use (e.g., ["Read", "Write"]).
+            model: The model to use for this query. If None, uses the planner model as default.
 
         Yields:
             Messages from the SDK's response stream.
         """
         options = ClaudeCodeOptions(
-            model=self._config.model,
+            model=model
+            or self._config.planner,  # Use planner model as default fallback
             system_prompt=system_prompt,
             allowed_tools=allowed_tools or [],
             cwd=self._cwd,

@@ -41,6 +41,16 @@ class Agent(ABC):
         """Returns the agent's class name, e.g., 'Planner', 'Coder'."""
         return self.__class__.__name__
 
+    def _get_model(self) -> str:
+        """Get the model to use for this agent based on configuration."""
+        # Convert class name to lowercase for config lookup
+        # e.g., "Planner" -> "planner", "PlanVerifier" -> "plan_verifier"
+        import re
+
+        agent_name = self.__class__.__name__
+        snake_case = re.sub("([A-Z]+)", r"_\1", agent_name).lower().lstrip("_")
+        return self.config.llm.get_model_for_agent(snake_case)
+
     async def _stream_and_collect_response(
         self, llm_stream: AsyncIterator[Message]
     ) -> str:
@@ -131,6 +141,7 @@ class Agent(ABC):
                     prompt=prompt,
                     system_prompt=system_prompt,
                     allowed_tools=allowed_tools,
+                    model=self._get_model(),
                 )
                 return await self._stream_and_collect_response(llm_stream)
             except ExceptionGroup:

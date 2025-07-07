@@ -1,7 +1,7 @@
 from typing import Any
 
 from code_team.agents.base import Agent
-from code_team.utils import filesystem, parsing
+from code_team.utils import parsing
 from code_team.utils.ui import display, interactive
 
 
@@ -26,10 +26,6 @@ class Planner(Agent):
         display.agent_thought(
             "Planner",
             "Hello! Let's create a plan. To start, I need to understand the project structure.",
-        )
-        repo_map = filesystem.get_repo_map(self.project_root)
-        filesystem.write_file(
-            self.project_root / "config/agent_instructions/REPO_MAP.md", repo_map
         )
 
         display.agent_thought(

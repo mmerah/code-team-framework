@@ -28,13 +28,14 @@ class Orchestrator:
         self.project_root = project_root
         self.config = self._load_config(config_path)
         self.state = OrchestratorState.IDLE
-        self.plan_dir = self.project_root / "docs" / "planning"
-        self.log_dir = self.project_root / ".codeteam" / "logs"
-        self.report_dir = self.project_root / ".codeteam" / "reports"
+        self.plan_dir = self.project_root / self.config.paths.plan_dir
+        self.report_dir = self.project_root / self.config.paths.report_dir
 
         self.llm_provider = llm.LLMProvider(self.config.llm, str(project_root))
         self.template_manager = templates.TemplateManager(
-            project_root / "config" / "agent_instructions"
+            project_root / self.config.paths.template_dir,
+            project_root=project_root,
+            guideline_files=self.config.templates.guideline_files,
         )
 
         self._ensure_dirs_exist()
@@ -47,7 +48,6 @@ class Orchestrator:
 
     def _ensure_dirs_exist(self) -> None:
         self.plan_dir.mkdir(parents=True, exist_ok=True)
-        self.log_dir.mkdir(parents=True, exist_ok=True)
         self.report_dir.mkdir(parents=True, exist_ok=True)
 
     def _create_agent(self, agent_class: type[Agent]) -> Agent:
@@ -419,10 +419,12 @@ class Orchestrator:
         return filesystem.load_plan(latest_plan_path)
 
     def _select_plan_interactively(self) -> Plan | None:
-        """Allows the user to choose from existing plans in docs/planning."""
+        """Allows the user to choose from existing plans in .codeteam/planning."""
         plan_dirs = [d for d in self.plan_dir.iterdir() if d.is_dir()]
         if not plan_dirs:
-            display.error("No plans found in docs/planning.")
+            display.error(
+                f"No plans found in {self.plan_dir.relative_to(self.project_root)}."
+            )
             return None
 
         # Sort by creation time (newest first)
@@ -446,7 +448,9 @@ class Orchestrator:
                     continue
 
         if not plan_options:
-            display.error("No valid plans found in docs/planning.")
+            display.error(
+                f"No valid plans found in {self.plan_dir.relative_to(self.project_root)}."
+            )
             return None
 
         # Show interactive menu

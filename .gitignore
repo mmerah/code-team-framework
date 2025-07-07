@@ -64,8 +64,6 @@ venv.bak/
 
 # Project-specific
 .codeteam/
-config/agent_instructions/REPO_MAP.md
-docs/planning/
 *.log
 
 # Formatting

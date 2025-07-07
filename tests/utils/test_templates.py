@@ -20,6 +20,7 @@ class TestTemplateManager:
             manager = TemplateManager(template_dir)
             assert manager._env is not None
             assert manager._env.loader is not None
+            assert manager._project_root is None
 
     def test_render_simple_template(self) -> None:
         """Test rendering a simple template."""
@@ -34,7 +35,6 @@ class TestTemplateManager:
             )
             (template_dir / "CODING_GUIDELINES.md").write_text("Coding content")
             (template_dir / "AGENT_OBJECTIVITY.md").write_text("Objectivity content")
-            (template_dir / "REPO_MAP.md").write_text("Repo map content")
 
             manager = TemplateManager(template_dir)
             result = manager.render("test.txt", name="World")
@@ -54,7 +54,6 @@ class TestTemplateManager:
             )
             (template_dir / "CODING_GUIDELINES.md").write_text("Test coding")
             (template_dir / "AGENT_OBJECTIVITY.md").write_text("Test objectivity")
-            (template_dir / "REPO_MAP.md").write_text("Test repo map")
 
             manager = TemplateManager(template_dir)
             result = manager.render("test.txt")
@@ -62,14 +61,17 @@ class TestTemplateManager:
             assert "Guidelines: Test architecture" in result
 
     def test_render_missing_guideline_files(self) -> None:
-        """Test rendering when guideline files are missing."""
+        """Test rendering when guideline files are missing from both file system and package."""
         with tempfile.TemporaryDirectory() as tmpdir:
             template_dir = Path(tmpdir)
 
             template_file = template_dir / "test.txt"
-            template_file.write_text("{{ ARCHITECTURE_GUIDELINES }}")
+            template_file.write_text("{{ UNKNOWN_GUIDELINE }}")
 
-            manager = TemplateManager(template_dir)
+            # Use a custom guideline file that doesn't exist anywhere
+            manager = TemplateManager(
+                template_dir, guideline_files=["UNKNOWN_GUIDELINE.md"]
+            )
             result = manager.render("test.txt")
 
             assert "not found" in result
@@ -107,7 +109,6 @@ class TestTemplateManager:
                 "ARCHITECTURE_GUIDELINES.md",
                 "CODING_GUIDELINES.md",
                 "AGENT_OBJECTIVITY.md",
-                "REPO_MAP.md",
             ]:
                 (template_dir / filename).write_text(f"Content of {filename}")
 
@@ -138,7 +139,6 @@ class TestTemplateManager:
             (template_dir / "ARCHITECTURE_GUIDELINES.md").write_text("Original content")
             (template_dir / "CODING_GUIDELINES.md").write_text("Coding content")
             (template_dir / "AGENT_OBJECTIVITY.md").write_text("Objectivity content")
-            (template_dir / "REPO_MAP.md").write_text("Repo map content")
 
             manager = TemplateManager(template_dir)
             result = manager.render(
@@ -170,8 +170,113 @@ class TestTemplateManager:
         with tempfile.TemporaryDirectory() as tmpdir:
             template_dir = Path(tmpdir)
             manager = TemplateManager(template_dir)
-
-            manager._env.loader = None
-
+            manager._loader = None  # type: ignore[assignment]
             result = manager._load_guideline("test.md")
             assert "not found" in result
+
+    def test_package_fallback_loading(self) -> None:
+        """Test that templates are loaded from package when not found in file system."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            template_dir = Path(tmpdir)
+
+            # Create a template that uses a guideline that only exists in package
+            template_file = template_dir / "test.txt"
+            template_file.write_text("{{ ARCHITECTURE_GUIDELINES }}")
+
+            # Don't create the guideline file in the temp directory
+            manager = TemplateManager(template_dir)
+            result = manager.render("test.txt")
+
+            # Should load from package resources
+            assert "Architecture Guidelines" in result
+            assert "not found" not in result
+
+    def test_file_system_priority(self) -> None:
+        """Test that file system templates take priority over package templates."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            template_dir = Path(tmpdir)
+
+            # Create a template and override guideline file
+            template_file = template_dir / "test.txt"
+            template_file.write_text("{{ ARCHITECTURE_GUIDELINES }}")
+
+            # Create a custom guideline file that overrides the package one
+            (template_dir / "ARCHITECTURE_GUIDELINES.md").write_text(
+                "Custom File System Guidelines"
+            )
+
+            # Create other required guidelines so they don't fall back to package
+            (template_dir / "CODING_GUIDELINES.md").write_text("Custom Coding")
+            (template_dir / "AGENT_OBJECTIVITY.md").write_text("Custom Objectivity")
+
+            manager = TemplateManager(template_dir)
+            result = manager.render("test.txt")
+
+            # Should use file system version
+            assert "Custom File System Guidelines" in result
+            assert "Architecture Guidelines" not in result
+
+    def test_custom_guideline_files(self) -> None:
+        """Test that custom guideline files can be configured."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            template_dir = Path(tmpdir)
+
+            template_file = template_dir / "test.txt"
+            template_file.write_text("{{ CUSTOM_GUIDELINE }}")
+
+            # Create custom guideline file
+            (template_dir / "CUSTOM_GUIDELINE.md").write_text("Custom Content")
+
+            manager = TemplateManager(
+                template_dir, guideline_files=["CUSTOM_GUIDELINE.md"]
+            )
+            result = manager.render("test.txt")
+
+            assert "Custom Content" in result
+
+    def test_dynamic_repo_map_generation(self) -> None:
+        """Test that repo map content is generated dynamically when project_root is provided."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            template_dir = Path(tmpdir)
+            project_root = Path(tmpdir) / "project"
+            project_root.mkdir()
+
+            # Create a simple project structure
+            (project_root / "file1.txt").write_text("content1")
+            (project_root / "subdir").mkdir()
+            (project_root / "subdir" / "file2.txt").write_text("content2")
+
+            template_file = template_dir / "test.txt"
+            template_file.write_text("{{ REPO_MAP }}")
+
+            # Create required guideline files
+            (template_dir / "ARCHITECTURE_GUIDELINES.md").write_text("Architecture")
+            (template_dir / "CODING_GUIDELINES.md").write_text("Coding")
+            (template_dir / "AGENT_OBJECTIVITY.md").write_text("Objectivity")
+
+            manager = TemplateManager(template_dir, project_root=project_root)
+            result = manager.render("test.txt")
+
+            # Should contain the dynamically generated repo map
+            assert "file1.txt" in result
+            assert "subdir/" in result
+            assert "file2.txt" in result
+
+    def test_no_repo_map_without_project_root(self) -> None:
+        """Test that REPO_MAP context is not available when project_root is not provided."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            template_dir = Path(tmpdir)
+
+            template_file = template_dir / "test.txt"
+            template_file.write_text("{{ REPO_MAP if REPO_MAP else 'No repo map' }}")
+
+            # Create required guideline files
+            (template_dir / "ARCHITECTURE_GUIDELINES.md").write_text("Architecture")
+            (template_dir / "CODING_GUIDELINES.md").write_text("Coding")
+            (template_dir / "AGENT_OBJECTIVITY.md").write_text("Objectivity")
+
+            manager = TemplateManager(template_dir)  # No project_root provided
+            result = manager.render("test.txt")
+
+            # Should not have repo map content
+            assert "No repo map" in result
