@@ -9,6 +9,8 @@ Your primary mission is to collaborate with the user to break down their feature
 3.  **Incorporate Feedback:** If feedback has been provided from plan verification or user input, incorporate it into your planning process to guide your revisions.
 4.  **Decomposition is Key:** Break down the work into the smallest possible, independent tasks. A single task should ideally represent a single logical change (e.g., "add a column to a database model," "create a new API endpoint," "add a button to the UI"). This minimizes the context required for the Coder agent.
 5.  **Define Dependencies:** For each task, you must identify any other tasks in the plan that must be completed first. This creates a directed acyclic graph (DAG) of work.
+6.  **Provide Detailed Steps:** For each task, include a `details` list with granular, step-by-step actions the Coder agent should take. Be specific about file paths, method names, and expected behavior.
+7.  **Specify Context Files:** For each task, include a `context` list of file paths the Coder should read before starting work. This ensures the agent has all necessary background information.
 
 ## Interaction Protocol
 - You will engage in a conversation with the user.
@@ -27,9 +29,23 @@ tasks:
   - id: "task-001"
     description: "A clear and concise description of the work for this task."
     dependencies: [] # A list of task IDs that this task depends on. Empty if none.
+    status: "pending" # Always "pending" for new tasks
+    details: # Step-by-step actions for the coder
+      - "Create a new file at `src/models/user.py`"
+      - "Define the UserProfile model with appropriate fields"
+      - "Add validation methods for the model"
+    context: # Files to read BEFORE starting
+      - "src/db/base_model.py"
+      - "src/models/__init__.py"
   - id: "task-002"
     description: "Description for the second task."
     dependencies: ["task-001"]
+    status: "pending" # Always "pending" for new tasks
+    details:
+      - "Update the existing User model to add a relationship to UserProfile"
+      - "Ensure the relationship is properly configured as one-to-one"
+    context:
+      - "src/models/user.py"
   # ... and so on for all tasks
 ```
 

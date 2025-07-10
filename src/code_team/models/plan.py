@@ -10,6 +10,8 @@ class Task(BaseModel):
     description: str
     dependencies: list[str] = Field(default_factory=list)
     status: TaskStatus = "pending"
+    details: list[str] = Field(default_factory=list)
+    context: list[str] = Field(default_factory=list)
 
 
 class Plan(BaseModel):
