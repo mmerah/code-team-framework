@@ -6,6 +6,7 @@ from pathlib import Path
 import yaml
 from rich.live import Live
 from rich.progress import Progress, TaskID
+from rich.table import Table
 
 from code_team.agents.base import Agent
 from code_team.agents.coder import Coder
@@ -499,3 +500,162 @@ class Orchestrator:
             return choice
 
         return await loop.run_in_executor(None, get_decision)
+
+    def display_dashboard(self) -> None:
+        """Display a dashboard with project status overview."""
+        # Get all plans
+        plan_dirs = [d for d in self.plan_dir.iterdir() if d.is_dir()]
+        if not plan_dirs:
+            display.warning("No plans found in the project.")
+            display.info("Run 'codeteam plan' to create a new plan.")
+            return
+
+        # Sort by creation time (newest first)
+        plan_dirs = sorted(plan_dirs, key=os.path.getmtime, reverse=True)
+
+        # Display all available plans
+        plans_table = Table(title="Available Plans")
+        plans_table.add_column("Plan ID", style="cyan", no_wrap=True)
+        plans_table.add_column("Description", style="white")
+        plans_table.add_column("Tasks", justify="center", style="yellow")
+        plans_table.add_column("Status", style="bold")
+
+        latest_plan = None
+        for plan_dir in plan_dirs:
+            plan_file = plan_dir / "plan.yml"
+            if plan_file.exists():
+                try:
+                    plan = filesystem.load_plan(plan_file)
+                    if plan:
+                        if latest_plan is None:
+                            latest_plan = plan
+
+                        # Calculate plan status
+                        total = len(plan.tasks)
+                        completed = sum(
+                            1 for t in plan.tasks if t.status == "completed"
+                        )
+                        failed = sum(1 for t in plan.tasks if t.status == "failed")
+
+                        if failed > 0:
+                            status = "[red]Has failures[/red]"
+                        elif completed == total:
+                            status = "[green]Complete[/green]"
+                        elif completed > 0:
+                            status = (
+                                f"[yellow]In progress ({completed}/{total})[/yellow]"
+                            )
+                        else:
+                            status = "[dim]Not started[/dim]"
+
+                        plans_table.add_row(
+                            plan.plan_id, plan.description, str(total), status
+                        )
+                except Exception:
+                    # Skip invalid plans
+                    continue
+
+        display.print(plans_table)
+
+        if not latest_plan:
+            display.error("No valid plans found.")
+            return
+
+        # Display detailed view of the latest plan
+        display.panel(
+            f"Plan ID: {latest_plan.plan_id}\nDescription: {latest_plan.description}",
+            title="Latest Plan Details",
+        )
+
+        # Create Task Progress table
+        table = Table(title="Task Progress")
+        table.add_column("ID", style="cyan", no_wrap=True)
+        table.add_column("Description", style="white")
+        table.add_column("Status", style="bold")
+        table.add_column("Dependencies", style="yellow")
+
+        # Count tasks by status
+        pending_count = 0
+        completed_count = 0
+        failed_count = 0
+
+        for task in latest_plan.tasks:
+            # Style status based on value
+            status_style = "yellow"
+            if task.status == "completed":
+                status_style = "green"
+                completed_count += 1
+            elif task.status == "failed":
+                status_style = "red"
+                failed_count += 1
+            else:
+                pending_count += 1
+
+            # Format dependencies
+            deps_str = ", ".join(task.dependencies) if task.dependencies else "None"
+
+            table.add_row(
+                task.id,
+                task.description,
+                f"[{status_style}]{task.status}[/{status_style}]",
+                deps_str,
+            )
+
+        display.print(table)
+
+        # Display summary
+        display.info(
+            f"Total: {len(latest_plan.tasks)} tasks | "
+            f"Completed: {completed_count} | "
+            f"Pending: {pending_count} | "
+            f"Failed: {failed_count}"
+        )
+
+        # Display Git Status
+        git_status = git.get_git_status(self.project_root)
+        if git_status and not git_status.startswith("Error"):
+            display.panel(
+                git_status if git_status else "Working tree clean", title="Git Status"
+            )
+        else:
+            display.warning("Unable to get git status")
+
+        # Suggest next steps
+        display.panel(
+            self._suggest_next_steps(latest_plan, pending_count, failed_count),
+            title="Next Steps",
+        )
+
+    def _suggest_next_steps(
+        self, plan: Plan, pending_count: int, failed_count: int
+    ) -> str:
+        """Suggest the next logical command based on current state."""
+        suggestions = []
+
+        if failed_count > 0:
+            suggestions.append("- Review failed tasks and fix issues manually")
+            suggestions.append("- Run 'codeteam code' to retry failed tasks")
+
+        if pending_count > 0:
+            # Check if there are tasks ready to execute
+            completed_ids = {t.id for t in plan.tasks if t.status == "completed"}
+            ready_tasks = [
+                t
+                for t in plan.tasks
+                if t.status == "pending"
+                and all(dep in completed_ids for dep in t.dependencies)
+            ]
+
+            if ready_tasks:
+                suggestions.append(
+                    f"- Run 'codeteam code' to execute {len(ready_tasks)} ready task(s)"
+                )
+            else:
+                suggestions.append("- Some tasks have unmet dependencies")
+                suggestions.append("- Review plan dependencies in plan.yml")
+
+        if pending_count == 0 and failed_count == 0:
+            suggestions.append("- All tasks completed!")
+            suggestions.append("- Run 'codeteam plan' to create a new plan")
+
+        return "\n".join(suggestions) if suggestions else "No specific recommendations"
