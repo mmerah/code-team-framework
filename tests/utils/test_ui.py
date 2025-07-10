@@ -259,6 +259,32 @@ class TestDisplayManager:
         assert panel.title == "[agent.coder]CODER[/agent.coder]"
         assert panel.border_style == "agent.coder"
 
+    def test_create_scrollable_panel(self) -> None:
+        """Test that create_scrollable_panel handles overflow correctly."""
+        # Mock console with specific height
+        mock_console = Mock(spec=Console)
+        mock_console.height = 30
+        manager = DisplayManager(console_instance=mock_console)
+
+        # Test with few lines (no overflow)
+        short_content = ["Line 1", "Line 2", "Line 3"]
+        panel = manager.create_scrollable_panel("agent", short_content)
+        assert isinstance(panel, Panel)
+        assert "Line 1\nLine 2\nLine 3" in str(panel.renderable)
+        assert "Showing last" not in str(panel.renderable)
+
+        # Test with many lines (overflow)
+        long_content = [f"Line {i}" for i in range(50)]
+        panel = manager.create_scrollable_panel("agent", long_content)
+        assert isinstance(panel, Panel)
+        # Should show overflow indicator
+        assert "Showing last" in str(panel.renderable)
+        assert "older output hidden" in str(panel.renderable)
+        # Should include recent lines
+        assert "Line 49" in str(panel.renderable)
+        # Should not include early lines
+        assert "Line 1" not in str(panel.renderable)
+
 
 class TestInteractiveManager:
     """Test the InteractiveManager class."""
