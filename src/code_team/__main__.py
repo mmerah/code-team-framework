@@ -97,6 +97,23 @@ def code(
         print(f"\nAn unexpected error occurred: {e}")
 
 
+@app.command()
+def dashboard(
+    config: Path = typer.Option(  # noqa: B008
+        Path(".codeteam/config.yml"),
+        "--config",
+        "-c",
+        help="Path to the configuration file relative to project root.",
+    ),
+) -> None:
+    """Display a quick overview of the project's status."""
+    project_root = Path.cwd()
+    config_path = project_root / config
+
+    orchestrator = Orchestrator(project_root=project_root, config_path=config_path)
+    orchestrator.display_dashboard()
+
+
 def main() -> None:
     """Main entry point for the Code Team Framework CLI."""
     app()
