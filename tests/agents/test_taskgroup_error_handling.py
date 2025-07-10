@@ -65,6 +65,22 @@ async def mock_llm_stream_partial_response() -> AsyncIterator[Any]:
     )
 
 
+async def mock_llm_stream_with_content(content: str) -> AsyncIterator[Any]:
+    """Mock LLM stream with specific content."""
+    yield AssistantMessage(content=[TextBlock(text=content)])
+    yield ResultMessage(
+        subtype="success",
+        duration_ms=1000,
+        duration_api_ms=900,
+        is_error=False,
+        num_turns=1,
+        session_id="test",
+        total_cost_usd=0.01,
+        usage={},
+        result="Success",
+    )
+
+
 @pytest.fixture
 def mock_config() -> CodeTeamConfig:
     """Create a mock configuration."""
@@ -265,16 +281,18 @@ class TestPlannerSpecificErrorHandling:
         mock_llm_provider.query.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_planner_final_plan_generation_error_handling(
-        self, fast_agent: Planner, mock_llm_provider: Mock
+    async def test_planner_parse_plan_files(
+        self, test_agent: Planner, mock_llm_provider: Mock
     ) -> None:
-        """Test that plan generation handles errors gracefully."""
-        mock_llm_provider.query.side_effect = ExceptionGroup(
-            "test", [ValueError("test")]
+        """Test that planner correctly parses plan files from response."""
+        # Test the _parse_plan_files method directly
+        response_with_files = (
+            "plan content\n===FILE_SEPARATOR===\nacceptance criteria content"
         )
 
-        result = await fast_agent._generate_final_plan(["User: Generate a plan"])
+        result = test_agent._parse_plan_files(response_with_files)
 
-        # Should return empty dict when plan generation fails but gets fallback
-        # The fallback won't contain the proper format, so it should return empty dict
-        assert isinstance(result, dict)
+        assert "plan.yml" in result
+        assert "ACCEPTANCE_CRITERIA.md" in result
+        assert result["plan.yml"] == "plan content"
+        assert result["ACCEPTANCE_CRITERIA.md"] == "acceptance criteria content"

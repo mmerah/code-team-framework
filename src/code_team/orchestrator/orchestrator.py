@@ -80,6 +80,10 @@ class Orchestrator:
 
         self.state = OrchestratorState.PLANNING_AWAITING_REVIEW
         display.success(f"Plan '{plan_id}' created in {current_plan_dir}")
+        display.info(
+            f"Please review the files in {current_plan_dir}/ and edit them if needed."
+        )
+
         # Simple interactive loop for plan review
         while self.state == OrchestratorState.PLANNING_AWAITING_REVIEW:
             user_input = interactive.get_menu_choice(
@@ -251,8 +255,22 @@ class Orchestrator:
             )
 
             prompter = self._create_agent(Prompter)
-            coder_prompt = await prompter.run(task=task)
+            prompt_file_path = await prompter.run(task=task, plan_id=plan.plan_id)
             progress.update(current_task_id, completed=1)
+
+            # Pause for user review
+            display.info(
+                f"Prompter has generated the instructions for the Coder. Please review the file: {prompt_file_path}"
+            )
+            user_choice = interactive.get_menu_choice(
+                "Proceed with these instructions?",
+                ["Proceed", "Edit instructions manually and then proceed"],
+            )
+
+            # User can edit the file manually if they choose to
+            if user_choice == "Edit instructions manually and then proceed":
+                display.info("Please edit the prompt file and press Enter when ready.")
+                input()
 
             self.state = OrchestratorState.CODING_IN_PROGRESS
             progress.update(
@@ -264,7 +282,7 @@ class Orchestrator:
             coder = self._create_agent(Coder)
             # Pass the feedback from the previous loop iteration (if any)
             await coder.run(
-                coder_prompt=coder_prompt,
+                coder_prompt=prompt_file_path,
                 verification_feedback=verification_feedback,
                 plan_id=plan.plan_id,
             )

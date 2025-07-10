@@ -12,6 +12,7 @@ from rich.live import Live
 
 from code_team.agents.base import Agent
 from code_team.models.config import CodeTeamConfig
+from code_team.utils import filesystem
 from code_team.utils.exceptions import ExceptionGroup
 from code_team.utils.llm import LLMProvider
 from code_team.utils.templates import TemplateManager
@@ -39,16 +40,23 @@ class Coder(Agent):
 
         Args:
             **kwargs: Keyword arguments containing:
-                - coder_prompt: The detailed instructions from the Prompter.
+                - coder_prompt: Path to the file containing detailed instructions from the Prompter.
                 - verification_feedback: Optional feedback from a previous failed run.
                 - plan_id: The ID of the current plan being executed (optional).
 
         Returns:
             True if the process completed, False otherwise.
         """
-        coder_prompt: str = kwargs["coder_prompt"]
+        coder_prompt_path: Path = kwargs["coder_prompt"]
         verification_feedback: str | None = kwargs.get("verification_feedback")
         plan_id: str | None = kwargs.get("plan_id")
+
+        # Read the prompt from the file
+        coder_prompt = filesystem.read_file(coder_prompt_path)
+        if not coder_prompt:
+            display.error(f"Failed to read coder prompt from {coder_prompt_path}")
+            return False
+
         system_prompt = self.templates.render(
             "CODER_INSTRUCTIONS.md",
             VERIFICATION_FEEDBACK=verification_feedback
