@@ -65,6 +65,7 @@ venv.bak/
 # Project-specific
 .codeteam/
 *.log
+.claude/commands/
 
 # Formatting
 .repo_formatter.yaml

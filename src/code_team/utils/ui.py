@@ -25,7 +25,6 @@ APP_THEME = Theme(
         "agent.coder": "green",
         "agent.verifier": "magenta",
         "agent.committer": "cyan",
-        "agent.summarizer": "yellow",
         "agent.planverifier": "bright_magenta",
         "agent.prompter": "bright_cyan",
         "agent.codeverifier": "bright_red",

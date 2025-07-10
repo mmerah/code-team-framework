@@ -1,8 +1,6 @@
 """Models for the Code Team Framework."""
 
 from .config import (
-    AgentConfig,
-    CoderAgentConfig,
     CodeTeamConfig,
     LLMConfig,
     PathConfig,
@@ -15,8 +13,6 @@ from .config import (
 from .plan import Plan, Task, TaskStatus
 
 __all__ = [
-    "AgentConfig",
-    "CoderAgentConfig",
     "CodeTeamConfig",
     "LLMConfig",
     "PathConfig",

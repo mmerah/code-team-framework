@@ -27,7 +27,6 @@ llm:
   verifier_sec: sonnet     # Model for the Security Verifier
   verifier_perf: sonnet    # Model for the Performance Verifier
   commit_agent: sonnet     # Model for the Commit Agent
-  summarizer: sonnet       # Model for the Summarizer agent
 ```
 
 Configures the Large Language Model settings with explicit per-agent configuration:
@@ -48,20 +47,8 @@ Each agent has its own explicit model configuration:
 - **verifier_sec**: Model for the Security Verifier (security analysis)
 - **verifier_perf**: Model for the Performance Verifier (performance analysis)
 - **commit_agent**: Model for the Commit Agent (generating commit messages)
-- **summarizer**: Model for the Summarizer agent (summarizing long logs)
 
 All agents default to `sonnet` but can be configured individually for optimal performance.
-
-### Agent Configuration
-
-```yaml
-agents:
-  coder:
-    log_summarize_threshold: 75000  # Characters threshold for log summarization
-```
-
-Configures behavior for specific agents:
-- **coder.log_summarize_threshold**: Maximum number of characters in logs before the Coder agent will summarize them to reduce context size
 
 ### Verification Configuration
 

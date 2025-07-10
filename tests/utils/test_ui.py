@@ -543,7 +543,6 @@ class TestTheme:
             "agent.coder",
             "agent.verifier",
             "agent.committer",
-            "agent.summarizer",
             "highlight",
             "title",
             "subtitle",
@@ -569,7 +568,6 @@ class TestTheme:
         assert str(theme_styles["agent.coder"]) == "green"
         assert str(theme_styles["agent.verifier"]) == "magenta"
         assert str(theme_styles["agent.committer"]) == "cyan"
-        assert str(theme_styles["agent.summarizer"]) == "yellow"
         assert str(theme_styles["highlight"]) == "bold"
         assert str(theme_styles["title"]) == "bold blue"
         assert str(theme_styles["subtitle"]) == "dim"

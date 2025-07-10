@@ -17,7 +17,6 @@ class LLMConfig(BaseModel):
     verifier_sec: str = "sonnet"
     verifier_perf: str = "sonnet"
     commit_agent: str = "sonnet"
-    summarizer: str = "sonnet"
 
     def get_model_for_agent(self, agent_name: str) -> str:
         """Get the model to use for a specific agent.
@@ -31,14 +30,6 @@ class LLMConfig(BaseModel):
         # Return the agent's configured model directly
         model: str = getattr(self, agent_name.lower())
         return model
-
-
-class CoderAgentConfig(BaseModel):
-    log_summarize_threshold: int = 75000
-
-
-class AgentConfig(BaseModel):
-    coder: CoderAgentConfig = Field(default_factory=CoderAgentConfig)
 
 
 class VerificationCommand(BaseModel):
@@ -103,7 +94,6 @@ class TemplateConfig(BaseModel):
 class CodeTeamConfig(BaseModel):
     version: float = 1.0
     llm: LLMConfig = Field(default_factory=LLMConfig)
-    agents: AgentConfig = Field(default_factory=AgentConfig)
     verification: VerificationConfig = Field(default_factory=VerificationConfig)
     verifier_instances: VerifierInstances = Field(default_factory=VerifierInstances)
     paths: PathConfig = Field(default_factory=PathConfig)
