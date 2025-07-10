@@ -57,6 +57,9 @@ def initialize_project(
             codeteam_dir / "agent_instructions", force, messages
         )
 
+        # Create Claude commands
+        _create_claude_commands(project_root, force, messages)
+
         messages.append("")
         messages.append("✅ Code Team Framework initialized successfully!")
         messages.append("")
@@ -66,6 +69,9 @@ def initialize_project(
             "2. Customize agent instructions: .codeteam/agent_instructions/"
         )
         messages.append("3. Start planning: codeteam plan 'Your request here'")
+        messages.append(
+            "   OR use slash commands: /codeteam-planner, /codeteam-coder, etc."
+        )
 
         return True, messages
 
@@ -148,6 +154,42 @@ def _extract_agent_instructions(
     except Exception as e:
         messages.append(f"⚠️  Warning: Could not extract agent instructions: {e}")
         messages.append("   Agent instructions will be loaded from package resources")
+
+
+def _create_claude_commands(
+    project_root: Path, force: bool, messages: list[str]
+) -> None:
+    """Create Claude command templates in .claude/commands directory."""
+    claude_dir = project_root / ".claude"
+    commands_dir = claude_dir / "commands"
+
+    # Create .claude/commands directory
+    if not commands_dir.exists():
+        commands_dir.mkdir(parents=True, exist_ok=True)
+        messages.append(f" Created directory: {commands_dir.relative_to(project_root)}")
+
+    try:
+        package_commands = files("code_team.templates.claude_commands")
+
+        for command_file in package_commands.iterdir():
+            if command_file.is_file() and command_file.name.endswith(".md"):
+                dest_file = commands_dir / command_file.name
+
+                file_existed = dest_file.exists()
+                if file_existed and not force:
+                    continue
+
+                # Read from package resource and write to destination
+                content = command_file.read_text(encoding="utf-8")
+                dest_file.write_text(content, encoding="utf-8")
+
+                action = "Updated" if file_existed else "Created"
+                relative_path = dest_file.relative_to(project_root)
+                messages.append(f" {action} command: {relative_path}")
+
+    except Exception as e:
+        messages.append(f" Warning: Could not create Claude commands: {e}")
+        messages.append("   Claude slash commands will not be available")
 
 
 def check_initialization_status(project_root: Path) -> tuple[bool, list[str]]:

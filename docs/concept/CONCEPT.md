@@ -207,7 +207,18 @@ verifier_instances:
 *   **State & Data:** YAML (`plan.yml`, `config.yml`) and Markdown for human-readable logs and reports.
 *   **Version Control:** Git. The framework is tightly integrated with the git workflow.
 
-#### VII. Future Improvements
+#### VII. Claude Code Integration
+
+The framework integrates with Claude Code to provide manual workflow options:
+
+*   **Slash Commands:** Running `codeteam init` creates slash commands in `.claude/commands/` that allow direct agent invocation:
+    *   `/codeteam-planner` - Generate plans with the Planner agent
+    *   `/codeteam-coder` - Implement code with the Coder agent
+    *   `/codeteam-prompter` - Generate implementation prompts
+    *   `/codeteam-*-verifier` - Run various verification agents
+*   **Hybrid Workflow:** Users can combine automated orchestration with manual agent invocation for greater control
+
+#### VIII. Future Improvements
 
 *   **Dockerization:** The entire system should run inside a Docker container that encapsulates the project, dependencies, and the framework itself. This provides a hermetically sealed, secure, and reproducible environment.
 *   **Vector Search for Prompter:** Instead of relying solely on descriptive names, the `Prompter` could use embeddings (e.g., via SentenceTransformers) and a vector index (e.g., FAISS) of the codebase to find semantically relevant files for a given task, improving its accuracy on large repositories.

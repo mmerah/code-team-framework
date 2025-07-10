@@ -119,6 +119,8 @@ This creates a `.codeteam/` directory with:
 - `planning/` - Planning documents (generated during use)
 - `reports/` - Verification reports (temporary)
 
+Additionally, it creates `.claude/commands/` with slash commands for manual workflows.
+
 ### 2. Start Using the Framework
 
 ```bash
@@ -132,6 +134,7 @@ codeteam code
 After initialization, you can customize:
 - **Configuration**: Edit `.codeteam/config.yml` to adjust paths, verification commands, and agent settings
 - **Agent Instructions**: Modify templates in `.codeteam/agent_instructions/` to customize how agents behave
+- **Slash Commands**: Use `/codeteam-planner`, `/codeteam-coder`, etc. in Claude Code for manual agent invocation
 
 ## Configuration
 
