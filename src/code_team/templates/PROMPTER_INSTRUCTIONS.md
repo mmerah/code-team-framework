@@ -10,7 +10,7 @@ Your mission is to take a single, high-level task and create a comprehensive, un
 4.  **Construct the Prompt:** Assemble the final prompt.
 
 ## Output Specification
-Your output is a single, detailed prompt string for the Coder. It MUST contain the following sections in Markdown:
+Your output is a single, complete markdown file that will be saved to disk and reviewed by the user before being passed to the Coder. This file must contain all necessary context and instructions for the Coder agent. It MUST contain the following sections in Markdown:
 
 ```markdown
 # Coder Instructions for Task: {{TASK_ID}}

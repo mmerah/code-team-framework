@@ -45,12 +45,14 @@ class Planner(Agent):
             )
 
             response_text = await self._get_planner_response(system_prompt, full_prompt)
+
+            # Check if response contains the file separator (plan generation)
+            if "===FILE_SEPARATOR===" in response_text:
+                return self._parse_plan_files(response_text)
+
             display.agent_thought("Planner", response_text)
 
             user_input = interactive.get_text_input("You").strip()
-
-            if user_input.lower() == "/save_plan":
-                return await self._generate_final_plan(conversation_history, plan_id)
 
             conversation_history.append(f"Planner: {response_text}")
             conversation_history.append(f"User: {user_input}")
@@ -60,29 +62,12 @@ class Planner(Agent):
         """Gets a single response from the LLM with robust error handling."""
         return await self._robust_llm_query(prompt=prompt, system_prompt=system_prompt)
 
-    async def _generate_final_plan(
-        self, conversation_history: list[str], plan_id: str | None = None
-    ) -> dict[str, str]:
-        """Generates the final plan files with robust error handling."""
-        system_prompt = self.templates.render(
-            "PLANNER_INSTRUCTIONS.md", PLAN_ID=plan_id or "unknown"
-        )
-        final_prompt = (
-            "\n".join(conversation_history)
-            + "\n\nUser: /save_plan"
-            + "\n\nOkay, I have all the information. Now, generate the `plan.yml` and `ACCEPTANCE_CRITERIA.md` content as separate files."
-            " First, output the full content for `plan.yml`, then a separator '===FILE_SEPARATOR===', then the full content for `ACCEPTANCE_CRITERIA.md`."
-        )
-
-        response_text = await self._robust_llm_query(
-            prompt=final_prompt, system_prompt=system_prompt
-        )
-
+    def _parse_plan_files(self, response_text: str) -> dict[str, str]:
+        """Parses the plan files from the response text."""
         parts = response_text.split("===FILE_SEPARATOR===")
         if len(parts) != 2:
-            display.agent_thought(
-                "Planner",
-                "I had trouble generating the plan in the correct format. Please try again.",
+            display.error(
+                "Failed to generate plan in the correct format. Please try again."
             )
             return {}
 

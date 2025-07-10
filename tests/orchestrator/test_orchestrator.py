@@ -3,6 +3,7 @@
 import tempfile
 from collections.abc import Generator
 from pathlib import Path
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -147,17 +148,36 @@ class TestReportManagement:
             patch.object(orchestrator, "_create_agent") as mock_create_agent,
             patch.object(orchestrator, "_commit_changes"),
             patch("code_team.utils.filesystem.write_file") as mock_write,
+            patch("code_team.utils.filesystem.read_file") as mock_read,
             patch("code_team.utils.filesystem.save_plan"),
             patch("code_team.utils.ui.display.panel"),
+            patch("code_team.utils.ui.display.info"),
+            patch("code_team.utils.ui.interactive.get_menu_choice") as mock_menu_choice,
             patch("rich.progress.Progress") as mock_progress,
         ):
             mock_verify.return_value = "Test verification report"
             mock_decision.return_value = "/accept_changes"  # Simulate accepting changes
+            mock_menu_choice.return_value = "Proceed"  # Mock the menu choice
+            mock_read.return_value = (
+                "Mock prompt content"  # Mock reading the prompt file
+            )
 
             # Mock the agents
-            mock_agent = AsyncMock()
-            mock_agent.run.return_value = "Mock result"
-            mock_create_agent.return_value = mock_agent
+            mock_prompter = AsyncMock()
+            mock_prompter.run.return_value = Path(
+                "/mock/path/task-001-prompt.md"
+            )  # Prompter returns Path now
+            mock_coder = AsyncMock()
+            mock_coder.run.return_value = True  # Coder returns success
+
+            def create_agent_side_effect(agent_class: type) -> Any:
+                if agent_class.__name__ == "Prompter":
+                    return mock_prompter
+                elif agent_class.__name__ == "Coder":
+                    return mock_coder
+                return AsyncMock()
+
+            mock_create_agent.side_effect = create_agent_side_effect
 
             mock_progress_instance = MagicMock()
             mock_progress.return_value = mock_progress_instance
