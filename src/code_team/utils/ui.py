@@ -150,6 +150,37 @@ class DisplayManager:
             transient=True,
         )
 
+    def create_scrollable_panel(
+        self, agent_name: str, content_lines: list[str]
+    ) -> Panel:
+        """Create a panel that shows the most recent lines when content exceeds terminal height.
+
+        Args:
+            agent_name: The name of the agent.
+            content_lines: List of content lines to display.
+
+        Returns:
+            A styled Panel object showing the most recent content.
+        """
+        # Calculate how many lines we can show while leaving room for UI
+        terminal_height = self.console.height
+        max_visible_lines = max(
+            10, terminal_height - 10
+        )  # Reserve space for panel borders and other UI
+
+        # Determine what content to show
+        if len(content_lines) > max_visible_lines:
+            # Show indicator and most recent lines
+            visible_lines = [
+                f"[dim]━━━ Showing last {max_visible_lines - 1} of {len(content_lines)} lines (older output hidden) ━━━[/dim]"
+            ]
+            visible_lines.extend(content_lines[-(max_visible_lines - 1) :])
+            content = "\n".join(visible_lines)
+        else:
+            content = "\n".join(content_lines)
+
+        return self.create_agent_panel(agent_name, content)
+
     def create_agent_panel(self, agent_name: str, content: str) -> Panel:
         """Create a styled panel for agent output.
 

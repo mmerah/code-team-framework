@@ -78,10 +78,9 @@ class Agent(ABC):
                                         "[", "[["
                                     ).replace("]", "]]")
                                     accumulated_content.append(escaped_text)
-                                    # Update the panel with accumulated content
-                                    full_content = "\n".join(accumulated_content)
-                                    panel = display.create_agent_panel(
-                                        self.name, full_content
+                                    # Update the panel with scrollable content
+                                    panel = display.create_scrollable_panel(
+                                        self.name, accumulated_content
                                     )
                                     live.update(panel)
                             elif isinstance(block, ToolUseBlock):
@@ -94,10 +93,9 @@ class Agent(ABC):
                                     accumulated_content.append(
                                         f"  [green]{key}:[/green] {escaped_value[:200]}"
                                     )
-                                # Update panel with tool use info
-                                full_content = "\n".join(accumulated_content)
-                                panel = display.create_agent_panel(
-                                    self.name, full_content
+                                # Update panel with scrollable content
+                                panel = display.create_scrollable_panel(
+                                    self.name, accumulated_content
                                 )
                                 live.update(panel)
                     elif isinstance(message, ResultMessage) and message.is_error:
@@ -105,8 +103,9 @@ class Agent(ABC):
                             f"[bold red]Result: Error ({message.subtype})[/bold red]"
                         )
                         accumulated_content.append(error_text)
-                        full_content = "\n".join(accumulated_content)
-                        panel = display.create_agent_panel(self.name, full_content)
+                        panel = display.create_scrollable_panel(
+                            self.name, accumulated_content
+                        )
                         live.update(panel)
             except ExceptionGroup as eg:
                 display.warning(

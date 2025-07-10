@@ -77,8 +77,11 @@ class TestAgent:
         result = await self.agent._stream_and_collect_response(mock_stream())
 
         assert result == "This is a test response"
-        # Verify create_agent_panel was called for the Live display
-        mock_display.create_agent_panel.assert_called()
+        # Verify panels were created
+        assert (
+            mock_display.create_agent_panel.called
+            or mock_display.create_scrollable_panel.called
+        )
 
     @pytest.mark.asyncio
     @patch("code_team.agents.base.Live")
@@ -107,8 +110,11 @@ class TestAgent:
         result = await self.agent._stream_and_collect_response(mock_stream())
 
         assert result == "I'll use a tool"
-        # Verify create_agent_panel was called for the Live display
-        mock_display.create_agent_panel.assert_called()
+        # Verify panels were created
+        assert (
+            mock_display.create_agent_panel.called
+            or mock_display.create_scrollable_panel.called
+        )
 
     @pytest.mark.asyncio
     @patch("code_team.agents.base.Live")
@@ -138,8 +144,11 @@ class TestAgent:
         result = await self.agent._stream_and_collect_response(mock_stream())
 
         assert result == "Some text"
-        # Verify create_agent_panel was called for the Live display
-        mock_display.create_agent_panel.assert_called()
+        # Verify panels were created
+        assert (
+            mock_display.create_agent_panel.called
+            or mock_display.create_scrollable_panel.called
+        )
 
     @pytest.mark.asyncio
     @patch("code_team.agents.base.Live")
@@ -206,13 +215,15 @@ class TestAgent:
         result = await self.agent._stream_and_collect_response(mock_stream())
 
         assert result == "Text with [markup] and [/markup]"
-        # Verify create_agent_panel was called and content includes escaped markup
-        mock_display.create_agent_panel.assert_called()
-        # Check that the panel content has escaped markup
-        call_args = mock_display.create_agent_panel.call_args_list
-        panel_content = str(call_args)
-        assert "[[markup]]" in panel_content
-        assert "[[/markup]]" in panel_content
+        # Verify create_scrollable_panel was called with escaped content
+        mock_display.create_scrollable_panel.assert_called()
+        # Get the last call to create_scrollable_panel
+        call_args = mock_display.create_scrollable_panel.call_args
+        # The content_lines should contain the escaped markup
+        content_lines = call_args[0][1]  # Second positional argument
+        assert len(content_lines) == 1
+        assert "[[markup]]" in content_lines[0]
+        assert "[[/markup]]" in content_lines[0]
 
     @pytest.mark.asyncio
     @patch("code_team.agents.base.Live")
@@ -237,12 +248,13 @@ class TestAgent:
 
         await self.agent._stream_and_collect_response(mock_stream())
 
-        # Verify create_agent_panel was called and content includes escaped markup
-        mock_display.create_agent_panel.assert_called()
-        # Check that the panel content has escaped markup in tool output
-        call_args = mock_display.create_agent_panel.call_args_list
-        panel_content = str(call_args)
-        assert "[[markup]]" in panel_content
+        # Verify create_scrollable_panel was called with escaped content
+        mock_display.create_scrollable_panel.assert_called()
+        # Get the call args to verify tool value escaping
+        call_args = mock_display.create_scrollable_panel.call_args
+        content_lines = call_args[0][1]  # Second positional argument
+        # Should have tool use line and parameter line
+        assert any("[[markup]]" in line for line in content_lines)
 
     @pytest.mark.asyncio
     async def test_run_method_abstract(self) -> None:
