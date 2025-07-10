@@ -4,8 +4,6 @@ import pytest
 from pydantic import ValidationError
 
 from code_team.models.config import (
-    AgentConfig,
-    CoderAgentConfig,
     CodeTeamConfig,
     LLMConfig,
     PathConfig,
@@ -32,7 +30,6 @@ class TestLLMConfig:
         assert config.verifier_sec == "sonnet"
         assert config.verifier_perf == "sonnet"
         assert config.commit_agent == "sonnet"
-        assert config.summarizer == "sonnet"
 
     def test_custom_agent_models(self) -> None:
         """Test that LLMConfig accepts custom models for agents."""
@@ -40,12 +37,10 @@ class TestLLMConfig:
             planner="opus",
             coder="haiku",
             verifier_arch="sonnet",
-            summarizer="haiku",
         )
         assert config.planner == "opus"
         assert config.coder == "haiku"
         assert config.verifier_arch == "sonnet"
-        assert config.summarizer == "haiku"
         # Others should still be defaults
         assert config.prompter == "sonnet"
         assert config.plan_verifier == "sonnet"
@@ -60,40 +55,9 @@ class TestLLMConfig:
 
         # Test agents with default models
         assert config.get_model_for_agent("prompter") == "sonnet"
-        assert config.get_model_for_agent("summarizer") == "sonnet"
 
         # Test case insensitive
         assert config.get_model_for_agent("PLANNER") == "opus"
-
-
-class TestCoderAgentConfig:
-    """Test the CoderAgentConfig model."""
-
-    def test_default_log_summarize_threshold(self) -> None:
-        """Test default log summarize threshold."""
-        config = CoderAgentConfig()
-        assert config.log_summarize_threshold == 75000
-
-    def test_custom_log_summarize_threshold(self) -> None:
-        """Test custom log summarize threshold."""
-        config = CoderAgentConfig(log_summarize_threshold=100000)
-        assert config.log_summarize_threshold == 100000
-
-
-class TestAgentConfig:
-    """Test the AgentConfig model."""
-
-    def test_default_coder_config(self) -> None:
-        """Test default CoderAgentConfig."""
-        config = AgentConfig()
-        assert isinstance(config.coder, CoderAgentConfig)
-        assert config.coder.log_summarize_threshold == 75000
-
-    def test_custom_coder_config(self) -> None:
-        """Test custom CoderAgentConfig."""
-        coder_config = CoderAgentConfig(log_summarize_threshold=50000)
-        config = AgentConfig(coder=coder_config)
-        assert config.coder.log_summarize_threshold == 50000
 
 
 class TestVerificationCommand:
@@ -203,7 +167,6 @@ class TestCodeTeamConfig:
         config = CodeTeamConfig()
         assert config.version == 1.0
         assert isinstance(config.llm, LLMConfig)
-        assert isinstance(config.agents, AgentConfig)
         assert isinstance(config.verification, VerificationConfig)
         assert isinstance(config.verifier_instances, VerifierInstances)
         assert isinstance(config.paths, PathConfig)
@@ -212,7 +175,6 @@ class TestCodeTeamConfig:
     def test_custom_config(self) -> None:
         """Test that CodeTeamConfig accepts custom values."""
         llm = LLMConfig(planner="opus", coder="haiku")
-        agents = AgentConfig(coder=CoderAgentConfig(log_summarize_threshold=50000))
         verification = VerificationConfig(
             commands=[VerificationCommand(name="test", command="pytest")]
         )
@@ -222,7 +184,6 @@ class TestCodeTeamConfig:
         config = CodeTeamConfig(
             version=2.0,
             llm=llm,
-            agents=agents,
             verification=verification,
             verifier_instances=verifier_instances,
             paths=paths,
@@ -231,7 +192,6 @@ class TestCodeTeamConfig:
         assert config.version == 2.0
         assert config.llm.planner == "opus"
         assert config.llm.coder == "haiku"
-        assert config.agents.coder.log_summarize_threshold == 50000
         assert len(config.verification.commands) == 1
         assert config.verifier_instances.security == 1
         assert config.paths.plan_dir == "custom/plans"
