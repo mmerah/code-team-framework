@@ -1,3 +1,7 @@
+# DEPRECATED
+
+Now that Claude Code supports Agents, this framework is mostly useless
+
 # Code Team Framework
 
 This project implements the "Code Team Framework", a system that orchestrates a team of specialized AI agents to automate software development tasks. It operates on a "human-on-the-loop" principle, where the system handles the cycles of coding and verification, while strategic decisions are left to the user.
